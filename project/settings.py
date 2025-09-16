@@ -52,8 +52,9 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'storages',
+    'polymorphic',
     
-    'admin',
+    'adminuser',
     'board',
     'booth',
     'common',

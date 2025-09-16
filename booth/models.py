@@ -5,16 +5,28 @@ class Location(models.Model):
     name = models.CharField(max_length=30)
     latitude = models.FloatField()
     longitude = models.FloatField()
-
-class Category(models.Model):
-    name = models.CharField(max_length=30)
+    map_x = models.FloatField()
+    map_y = models.FloatField()
 
 class Booth(models.Model):
+    class Category(models.TextChoices):
+        FOODTRUCK = 'FoodTruck', '푸드트럭'
+        TOILET = 'Toilet', '화장실'
+        DRINK = 'Drink', '주류판매'
+        STORE = 'Store', '편의점'
+        BOOTH = 'Booth', '부스'
+        
     name = models.CharField(max_length=30)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.CharField(
+        max_length=10,
+        choices=Category.choices,
+        default=Category.booth,
+    )
     is_night = models.BooleanField(default=False)
     image_url = models.CharField(max_length=200, blank=True, null=True)
     is_liked = models.BooleanField(default=False)
+    is_event = models.BooleanField(default=False)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE)
     
 class Menu(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
@@ -28,6 +40,15 @@ class BoothDetail(models.Model):
     all_table = models.IntegerField()
     usage_table = models.IntegerField()
     can_usage = models.BooleanField(default=True)
+    description = models.TextField()
+    
+class BoothSchedule(models.Model):
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
+    day = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
-    description = models.TextField()
+    
+class Like(models.Model):
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
+    user_id = models.IntegerField()
+    is_liked = models.BooleanField(default=False)
