@@ -20,7 +20,7 @@ class Booth(models.Model):
     category = models.CharField(
         max_length=10,
         choices=Category.choices,
-        default=Category.booth,
+        default=Category.BOOTH,
     )
     is_night = models.BooleanField(default=False)
     image_url = models.CharField(max_length=200, blank=True, null=True)
