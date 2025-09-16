@@ -9,12 +9,14 @@ dj-rest-auth==7.0.1
 Django==5.2.6
 django-allauth==65.11.2
 django-cors-headers==4.8.0
+django-environ==0.12.0
 django-filter==25.1
 django-polymorphic==4.1.0
 django-storages==1.14.6
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.28.0
+drf-yasg==1.21.10
 inflection==0.5.1
 jmespath==1.0.1
 jsonschema==4.25.1
@@ -26,6 +28,7 @@ platformdirs==4.4.0
 PyJWT==2.10.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
+pytz==2025.2
 PyYAML==6.0.2
 referencing==0.36.2
 rpds-py==0.27.1
