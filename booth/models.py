@@ -26,6 +26,7 @@ class Booth(models.Model):
     image_url = models.CharField(max_length=200, blank=True, null=True)
     is_liked = models.BooleanField(default=False)
     is_event = models.BooleanField(default=False)
+    is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
     
 class Menu(models.Model):

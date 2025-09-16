@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Booth, Menu, BoothSchedule
+from .models import *
 
 class DrinkMenuSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,3 +38,5 @@ class ToiletDetailSerializer(serializers.ModelSerializer):
             "name",
             "image_url",
         ]
+
+
