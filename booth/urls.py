@@ -1,6 +1,10 @@
-from django.urls import path
-from .views import BoothDetailAPIView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import BoothViewSet
+
+router = DefaultRouter()
+router.register(r'booths', BoothViewSet, basename='booth')
 
 urlpatterns = [
-    path('booths/detail/<int:pk>/', BoothDetailAPIView.as_view(), name='booth-detail'),
+    path('', include(router.urls)),
 ]
