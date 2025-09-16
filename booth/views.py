@@ -1,26 +1,35 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
 from .models import Booth
-from .serializers import ToiletDetailSerializer
-from .services import get_toilet_detail
+from .serializers import ToiletDetailSerializer, DrinkDetailSerializer
+from .services import get_toilet_detail, get_drink_detail
 
+class BoothViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
 
-class BoothDetailAPIView(APIView):
-    permission_classes = [AllowAny] # 로그인 없이 접근 가능
-    """
-    /booths/detail/{id}/
-    """
-
-    def get(self, request, pk):
+    @action(detail=False, methods=["get"], url_path=r"detail/(?P<pk>\d+)")
+    def booth_detail(self, request, pk=None): 
+        """
+        /booths/detail/{id}/ : 부스 상세
+        """
         booth = get_object_or_404(Booth, id=pk)
 
-        if booth.category == Booth.Category.TOILET: # 부스 카테고리가 Toilet인 경우
+        # 화장실 상세
+        if booth.category == Booth.Category.TOILET:
             booth = get_toilet_detail(pk)
             serializer = ToiletDetailSerializer(booth)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response({"error": "요청한 부스가 화장실 카테고리가 아님"}, status=status.HTTP_400_BAD_REQUEST)
+        # 주류 상세
+        elif booth.category == Booth.Category.DRINK:
+            booth = get_drink_detail(pk)
+            serializer = DrinkDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
+
