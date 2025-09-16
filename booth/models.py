@@ -33,7 +33,7 @@ class Menu(models.Model):
     name = models.CharField(max_length=30)
     price = models.IntegerField()
     image_url = models.CharField(max_length=200, blank=True, null=True)
-    ingredient = models.IntegerField()
+    ingrediant = models.IntegerField()
     sold = models.IntegerField() # 판매량
     
 class BoothDetail(models.Model):
