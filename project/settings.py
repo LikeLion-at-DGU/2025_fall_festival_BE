@@ -134,10 +134,12 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         #"common.authentication.CookieJwtAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication", # 기존 JWT 유지
+        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # 기본은 모두 접근 허용, 보호 API만 퍼미션 적용
+        #'rest_framework.permissions.IsAuthenticated', # 기본 보안 유지
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -214,3 +216,15 @@ STORAGES = {
     },
 }
 
+
+# 캐시 설정 추가 (UID -> admin_id 매핑 저장. 개발은 LocMem, 배포는 Redis)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-admin-cache",
+    }
+}
+
+# UID 만료 시간 (초) - 1시간
+ADMIN_UID_TTL = 3600
