@@ -4,10 +4,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
-from .models import Booth
-from .selectors import get_booth_list, get_toilet_detail, get_drink_detail, get_foodtruck_detail
-from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer, FoodtruckDetailSerializer, DayBoothDetailSerializer, NightBoothDetailSerializer
-
+from .models import *
+from .selectors import *
+from .serializers import *
+import random
 
 class BoothViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -49,6 +49,56 @@ class BoothViewSet(viewsets.ViewSet):
         return Response({
             "results": serializer.data
         }, status=status.HTTP_200_OK)
+    
+
+    @action(detail=False, methods=["post"], url_path="nearby")
+    def nearby_booths(self, request):
+        """
+        POST /booths/nearby/
+        사용자 좌표 기반으로 가장 가까운 Location을 찾고,
+        해당 Location의 Booth 중 랜덤 3개 반환
+        """
+        data = request.data
+        user_location = data.get("user_location")
+        is_night = data.get("is_night")
+        if not user_location or "x" not in user_location or "y" not in user_location:
+            return Response({"error": "user_location must include x, y"}, status=400)
+
+        user_x = float(user_location["x"])
+        user_y = float(user_location["y"])
+
+        # 1) 가장 가까운 Location 찾기
+        locations = list(Location.objects.all())
+        nearest_location = None
+        min_dist = float("inf")
+
+        for loc in locations:
+            if loc.latitude and loc.longitude:
+                dist = calculate_distance(user_x, user_y, loc.latitude, loc.longitude)
+                if dist < min_dist:
+                    min_dist = dist
+                    nearest_location = loc
+
+        if not nearest_location:
+            return Response({"error": "No valid locations"}, status=404)
+
+        # 2) 해당 location의 booth 조회
+        booths = list(Booth.objects.filter(location=nearest_location))
+
+        if isinstance(is_night, bool):
+            booths = booths.filter(is_night=is_night)
+
+        # 3) 랜덤 3개 선택
+        if len(booths) > 3:
+            booths = random.sample(booths, 3)
+
+        serializer = BoothListSerializer(booths, many=True, context={"date": data.get("date")})
+
+        return Response({
+            "nearest_location": nearest_location.name,
+            "distance_m": int(round(min_dist)),
+            "booths": serializer.data
+        }, status=200)
     
 
     @action(detail=False, methods=["get"], url_path=r"detail/(?P<pk>\d+)")
