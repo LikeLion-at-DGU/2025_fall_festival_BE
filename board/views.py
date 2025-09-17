@@ -7,42 +7,29 @@ from rest_framework.decorators import action
 
 from .models import *
 from .serializers import *
+from .services import get_writer_from_uid
 
-# uid 가 request 로 오고 admin의 code에 저장
-# 간단 토큰 저장소 (실제 배포시 DB나 Redis 사용)
-TOKEN_STORE = {
-    "A1B2C3D4": 1,  # token: admin_id
-    "B2C3D4E5": 2,
-}
-
-
-def get_admin_from_token(request):
-    token = request.headers.get('Authorization')
-    if not token or token not in TOKEN_STORE:
-        return None
-    from adminuser.models import Admin
-    try:
-        return Admin.objects.get(id=TOKEN_STORE[token])
-    except Admin.DoesNotExist:
-        return None
     
 # 게시물 생성/수정/조회, 관련 게시물
 # POST /board/notices 또는 losts
 # PATCH, GET /board/{id}
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all().order_by("-created_at")
-    serializer_class = BoardListSerializer
-    permission_classes = [AllowAny]
+    serializer_class = BoardPolymorphicSerializer
 
     def get_serializer_class(self):
-        if self.action in ["list"]:
+        if self.action == "list":
+            # 리스트 조회용
             return BoardListSerializer
-        if self.action in ["retrieve", "update", "partial_update"]:
-            if isinstance(self.get_object(), Lost):
+        elif self.action in ["retrieve", "update", "partial_update"]:
+            obj = self.get_object()
+            if isinstance(obj, Lost):
                 return LostSerializer
-            elif isinstance(self.get_object(), Notice):
+            elif isinstance(obj, Notice):
                 return NoticeSerializer
-        return BoardSerializer
+            elif isinstance(obj, BoothEvent):
+                return BoothEventSerializer
+        return BoardPolymorphicSerializer
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -103,15 +90,19 @@ class BoardViewSet(viewsets.ModelViewSet):
 class NoticeViewSet(viewsets.ModelViewSet):
     queryset = Notice.objects.all().order_by("-created_at")
     serializer_class = NoticeSerializer
-    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
+        uid = request.data.get("code")  # request로 들어오는 UID
+        writer_name = get_writer_from_uid(uid)
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        board = serializer.save()
+        board = serializer.save(writer=writer_name)
 
         return Response(
-            {"message": "공지 작성이 완료되었습니다.", "board_id": board.id},
+            {"message": "공지 작성이 완료되었습니다.", 
+                "board_id": board.id,
+                "writer": board.writer},
             status=status.HTTP_201_CREATED,
         )
     
@@ -124,12 +115,19 @@ class LostViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
+        uid = request.data.get("code")  # request로 들어오는 UID
+        writer_name = get_writer_from_uid(uid)
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        board = serializer.save()
+        board = serializer.save(writer=writer_name)
 
         return Response(
-            {"message": "분실물이 등록되었습니다.", "board_id": board.id, "board_title": board.title},
+            {"message": "분실물이 등록되었습니다.", 
+                "board_id": board.id, 
+                "writer": board.writer,
+                "board_title": board.title
+                },
             status=status.HTTP_201_CREATED,
         )
     
@@ -140,26 +138,33 @@ class BoothEventViewSet(viewsets.ModelViewSet):
 
     # POST /board/events/
     def create(self, request, *args, **kwargs):
-        # 1. 토큰으로 admin 확인
-        admin = get_admin_from_token(request)
-        if not admin:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # 2. role 체크 (동아리, 학과만 허용)
-        if admin.role not in ['Club', '동아리','Major', '학과']:
-            return Response({"error": "권한이 없습니다. 동아리/학과 관리자만 이벤트 생성 가능"}, 
-                            status=status.HTTP_403_FORBIDDEN)
-
+        uid = request.data.get("code")  # 글 작성 시 전달되는 token/UID
+        writer_name = get_writer_from_uid(uid)
         
-        # 3. admin 소속 Booth 가져오기
+        from adminuser.models import Admin
+        try:
+            admin = Admin.objects.get(code=uid)
+        except Admin.DoesNotExist:
+            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. UID로 Admin 조회
+        from adminuser.models import Admin
+        try:
+            admin = Admin.objects.get(code=uid)
+        except Admin.DoesNotExist:
+            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Admin과 연결된 Booth 가져오기
+        from booth.models import Booth
         try:
             booth = Booth.objects.get(admin=admin)
+            booth.is_event = True  # 이벤트 등록됨 표시
+            booth.save()
         except Booth.DoesNotExist:
-            return Response({"error": "관리자 소속 부스가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 4. 이벤트 생성
+            booth = None  # Booth가 없으면 그냥 넘어감
+        
         booth_event = BoothEvent.objects.create(
-            booth=booth,
+            writer=writer_name,
             title=request.data.get('title'),
             detail=request.data.get('detail'),
             start_time=request.data.get('start_time'),
@@ -168,3 +173,17 @@ class BoothEventViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(booth_event)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        board = serializer.save()
+
+        return Response({
+            "message": "BoothEvent가 수정되었습니다.",
+            "board_id": board.id,
+            "writer": board.writer,
+            "board_title": board.title
+        })
