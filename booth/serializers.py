@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from .models import *
 
+
+class BoothSerializer(serializers.ModelSerializer):
+    pass
+
 class DrinkMenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
