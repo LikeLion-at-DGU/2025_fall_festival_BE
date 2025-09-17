@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from adminuser.models import Admin
 
 # Create your models here.
@@ -8,7 +9,6 @@ class Location(models.Model):
     longitude = models.FloatField()
     map_x = models.FloatField()
     map_y = models.FloatField()
-    description = models.CharField(max_length=30, blank=True)
 
 class Booth(models.Model):
     class Category(models.TextChoices):
@@ -28,8 +28,13 @@ class Booth(models.Model):
     is_night = models.BooleanField(default=False)
     image_url = models.CharField(max_length=200, blank=True, null=True)
     is_event = models.BooleanField(default=False)
+    is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
+    operate_date = models.DateField()
     
+    def is_operating_today(self):
+        return self.operate_date == timezone.localdate()
+
     
 class BoothDetail(models.Model):
     booth = models.OneToOneField(Booth, on_delete=models.CASCADE)
@@ -37,6 +42,7 @@ class BoothDetail(models.Model):
     usage_table = models.IntegerField()
     can_usage = models.BooleanField(default=True)
     description = models.TextField()
+
 class Menu(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
