@@ -33,4 +33,6 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'), # API 스키마
     path('api/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'), # Swagger UI
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'), # Redoc UI
+    
+    path("api/common/", include("common.urls")),
 ]

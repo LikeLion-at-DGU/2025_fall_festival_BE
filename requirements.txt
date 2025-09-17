@@ -17,6 +17,7 @@ djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.28.0
 drf-yasg==1.21.10
+gunicorn==23.0.0
 inflection==0.5.1
 jmespath==1.0.1
 jsonschema==4.25.1
@@ -38,4 +39,4 @@ sqlparse==0.5.3
 tzdata==2025.2
 uritemplate==4.2.0
 urllib3==2.5.0
-whitenoise==6.10.0
+google-cloud-translate==3.21.1

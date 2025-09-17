@@ -9,7 +9,7 @@ class Location(models.Model):
     longitude = models.FloatField()
     map_x = models.FloatField()
     map_y = models.FloatField()
-    description = models.CharField(max_length=30)
+    description = models.CharField(max_length=30, blank=True)
 
 class Booth(models.Model):
     class Category(models.TextChoices):
@@ -51,7 +51,10 @@ class Menu(models.Model):
     image_url = models.CharField(max_length=200, blank=True, null=True)
     ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
-    
+
+class Corner(models.Model):
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
+    name = models.CharField(max_length=30)
     
 class BoothSchedule(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
