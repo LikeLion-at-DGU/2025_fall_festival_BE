@@ -27,6 +27,7 @@ class BoothViewSet(viewsets.ViewSet):
         user_location = data.get("user_location")
         ordering = data.get("ordering", "auto")
         top_liked_3 = data.get("top_liked_3", False)
+        is_night = data.get("is_night")
 
         if user_location and not ("x" in user_location and "y" in user_location):
             return Response(
@@ -40,7 +41,8 @@ class BoothViewSet(viewsets.ViewSet):
             building_id=building_id,
             user_location= user_location,
             ordering=ordering,
-            top_liked_3=top_liked_3
+            top_liked_3=top_liked_3,
+            is_night=is_night
         )
 
         serializer = BoothListSerializer(booths, many=True, context={"date": date})
