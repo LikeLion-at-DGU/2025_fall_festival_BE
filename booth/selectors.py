@@ -7,6 +7,13 @@ from math import radians, sin, cos, sqrt, atan2
 def calculate_distance(lat1, lon1, lat2, lon2):
      """
      위도, 경도(도 단위) → 실제 거리 반환
+
+     [매개변수]
+     - lat1, lon1: 기준점(x, y) → 위도, 경도 값이라고 가정
+     - lat2, lon2: 대상점(부스)의 위도/경도 (도 단위)
+
+     [반환값]
+     - 거리(meter, float)
      """
      R = 6371000  # 지구 반지름(m)
      dlat = radians(lat2 - lat1)
@@ -41,9 +48,9 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
      booths = list(qs)
 
      # 거리 계산
-     if user_location and "latitude" in user_location and "longitude" in user_location:
-          user_lat = user_location["latitude"]
-          user_lon = user_location["longitude"]
+     if user_location and "x" in user_location and "y" in user_location:
+          user_lat = user_location["x"]
+          user_lon = user_location["y"]
 
           for booth in booths:
                if booth.location and booth.location.latitude and booth.location.longitude:
@@ -53,24 +60,20 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
                     )
                else:
                     booth.distance_m = None
+          # 정렬 조건
+          if ordering == "distance":
+               booths.sort(key=lambda b: b.distance_m if b.distance_m is not None else float("inf"))
+     else:
+          if ordering == "name":
+               booths.sort(key=lambda b: b.name)
+          elif ordering == "-name":
+               booths.sort(key=lambda b: b.name, reverse=True)
+          else:
+               booths.sort(key=lambda b: b.name)
 
      #TODO: 좋아요 count + 현재 사용자 좋아요 여부 annotate 필요
 
-     # ordering 정렬
-     if ordering == "name":
-          qs = qs.order_by("name")
-     elif ordering == "-name":
-          qs = qs.order_by("-name")
-     elif ordering == "likes":
-          qs = qs.order_by("likes_count")
-     elif ordering == "-likes":
-          qs = qs.order_by("-likes_count")
-     elif ordering == "distance" and "distance_m" in [f.name for f in qs.model._meta.get_fields()]:
-          qs = qs.order_by("distance_m")
-     else:
-          qs = qs.order_by("name")
-
      if top_liked_3:
-          qs = qs.order_by("-likes_count")[:3]
+          booths = booths[:3]
 
-     return qs
+     return booths

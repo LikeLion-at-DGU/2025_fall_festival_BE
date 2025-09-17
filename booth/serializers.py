@@ -52,8 +52,8 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class BoothListSerializer(serializers.ModelSerializer):
     location = LocationSerializer()
-    likes_count = serializers.IntegerField()
-    is_liked = serializers.BooleanField()
+    likes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
     is_event = serializers.BooleanField()
     today_open_time = serializers.SerializerMethodField()
     today_close_time = serializers.SerializerMethodField()
