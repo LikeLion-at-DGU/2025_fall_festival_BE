@@ -5,22 +5,23 @@ from .models import *
 class BoothSerializer(serializers.ModelSerializer):
     pass
 
-class DrinkMenuSerializer(serializers.ModelSerializer):
+class MenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
         fields = ["name", "price", "image_url"]
 
 
-class DrinkScheduleSerializer(serializers.ModelSerializer):
+class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = BoothSchedule
         fields = ["day", "start_time", "end_time"]
 
 
 class DrinkDetailSerializer(serializers.ModelSerializer):
-    location_name = serializers.CharField(source="location.name") 
-    menus = DrinkMenuSerializer(source="menu_set", many=True, read_only=True)
-    schedules = DrinkScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
+    location_name = serializers.CharField(source="location.name", read_only=True) 
+    location_description = serializers.CharField(source="location.description", read_only=True) 
+    menus = MenuSerializer(source="menu_set", many=True, read_only=True)
+    schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
 
     class Meta:
         model = Booth
@@ -29,18 +30,42 @@ class DrinkDetailSerializer(serializers.ModelSerializer):
             "name",
             "image_url",
             "location_name",
+            "location_description",
             "menus",
             "schedules",
         ]
 
+class FoodtruckDetailSerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(source="location.name", read_only=True) 
+    location_description = serializers.CharField(source="location.description", read_only=True) 
+    menus = MenuSerializer(source="menu_set", many=True, read_only=True)
+    schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
 
-class ToiletDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booth
         fields = [
             "id",
             "name",
             "image_url",
+            "location_name",
+            "location_description",
+            "menus",
+            "schedules",
+        ]
+
+
+class ToiletDetailSerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(source="location.name", read_only=True) 
+    location_description = serializers.CharField(source="location.description", read_only=True) 
+    
+    class Meta:
+        model = Booth
+        fields = [
+            "id",
+            "name",
+            "image_url",
+            "location_name",
+            "location_description",
         ]
 
 
@@ -52,9 +77,9 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class BoothListSerializer(serializers.ModelSerializer):
     location = LocationSerializer()
-    #likes_count = serializers.IntegerField()
-    #is_liked = serializers.BooleanField()
-    has_event_now = serializers.BooleanField()
+    likes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_event = serializers.BooleanField()
     today_open_time = serializers.SerializerMethodField()
     today_close_time = serializers.SerializerMethodField()
     distance_m = serializers.SerializerMethodField()
@@ -66,11 +91,19 @@ class BoothListSerializer(serializers.ModelSerializer):
             "is_dorder",
             "location",
             "today_open_time", "today_close_time",
-            # "likes_count", "is_liked", 
-            "has_event_now",
+            "likes_count", "is_liked", 
+            "is_event",
             "distance_m"
         ]
 
+    def get_likes_count(self, obj):
+        # 임시 디폴트값 리턴
+        return 0  
+
+    def get_is_liked(self, obj):
+        # 임시 디폴트값 리턴
+        return False
+    
     def _get_schedule_for_date(self, obj: Booth):
         date = self.context.get("date", timezone.localdate())
         return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
