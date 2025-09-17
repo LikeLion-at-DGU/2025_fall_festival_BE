@@ -8,6 +8,7 @@ from .models import Booth
 from .selectors import get_booth_list, get_toilet_detail, get_drink_detail, get_foodtruck_detail
 from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer, FoodtruckDetailSerializer, DayBoothDetailSerializer, NightBoothDetailSerializer
 
+
 class BoothViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
@@ -25,6 +26,7 @@ class BoothViewSet(viewsets.ViewSet):
         user_location = data.get("user_location")
         ordering = data.get("ordering", "auto")
         top_liked_3 = data.get("top_liked_3", False)
+        is_night = data.get("is_night")
 
         if user_location and not ("x" in user_location and "y" in user_location):
             return Response(
@@ -38,7 +40,8 @@ class BoothViewSet(viewsets.ViewSet):
             building_id=building_id,
             user_location= user_location,
             ordering=ordering,
-            top_liked_3=top_liked_3
+            top_liked_3=top_liked_3,
+            is_night=is_night
         )
 
         serializer = BoothListSerializer(booths, many=True, context={"date": date})
@@ -82,7 +85,7 @@ class BoothViewSet(viewsets.ViewSet):
         elif booth.category == Booth.Category.BOOTH and booth.is_night:
             serializer = NightBoothDetailSerializer(booth)
             return Response(serializer.data, status=status.HTTP_200_OK)
-            
+
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
 
 

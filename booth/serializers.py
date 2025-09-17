@@ -130,7 +130,6 @@ class FoodtruckDetailSerializer(serializers.ModelSerializer):
             "schedules",
         ]
 
-
 class ToiletDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True) 
     location_description = serializers.CharField(source="location.description", read_only=True) 
@@ -154,9 +153,9 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class BoothListSerializer(serializers.ModelSerializer):
     location = LocationSerializer()
-    #likes_count = serializers.IntegerField()
-    #is_liked = serializers.BooleanField()
-    has_event_now = serializers.BooleanField()
+    likes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_event = serializers.BooleanField()
     today_open_time = serializers.SerializerMethodField()
     today_close_time = serializers.SerializerMethodField()
     distance_m = serializers.SerializerMethodField()
@@ -168,11 +167,19 @@ class BoothListSerializer(serializers.ModelSerializer):
             "is_dorder",
             "location",
             "today_open_time", "today_close_time",
-            # "likes_count", "is_liked", 
-            "has_event_now",
+            "likes_count", "is_liked", 
+            "is_event",
             "distance_m"
         ]
 
+    def get_likes_count(self, obj):
+        # 임시 디폴트값 리턴
+        return 0  
+
+    def get_is_liked(self, obj):
+        # 임시 디폴트값 리턴
+        return False
+    
     def _get_schedule_for_date(self, obj: Booth):
         date = self.context.get("date", timezone.localdate())
         return obj.boothschedule_set.filter(day=date).order_by("start_time").first()

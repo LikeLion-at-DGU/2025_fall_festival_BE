@@ -19,7 +19,7 @@ class Booth(models.Model):
         STORE = 'Store', '편의점'
         BOOTH = 'Booth', '부스'
     
-    #admin = models.ForeignKey(Admin, on_delete=models.CASCADE)    
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, blank=True, null=True)    
     name = models.CharField(max_length=30)
     category = models.CharField(
         max_length=10,

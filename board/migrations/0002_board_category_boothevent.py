@@ -1,33 +1,26 @@
-
 import django.db.models.deletion
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
 
-    initial = True
-
     dependencies = [
         ("board", "0001_initial"),
     ]
 
     operations = [
-        migrations.CreateModel(
-            name="BoothCoupon",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("price", models.IntegerField()),
-                ("is_used", models.BooleanField(default=False)),
-                ("serial_number", models.CharField(max_length=50)),
-            ],
+        migrations.AddField(
+            model_name="board",
+            name="category",
+            field=models.CharField(
+                choices=[
+                    ("Notice", "공지"),
+                    ("LostItem", "분실물"),
+                    ("Event", "이벤트"),
+                ],
+                default="Notice",
+                max_length=10,
+            ),
         ),
         migrations.CreateModel(
             name="BoothEvent",
@@ -48,10 +41,9 @@ class Migration(migrations.Migration):
                 ("start_time", models.DateField()),
                 ("end_time", models.DateField()),
                 (
-                    "coupon",
+                    "booth",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="event.boothcoupon",
+                        on_delete=django.db.models.deletion.CASCADE, to="booth.booth"
                     ),
                 ),
             ],
