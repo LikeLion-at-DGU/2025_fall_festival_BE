@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 # Create your models here.
 class Location(models.Model):
@@ -28,7 +29,11 @@ class Booth(models.Model):
     is_event = models.BooleanField(default=False)
     is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
+    operate_date = models.DateField()
     
+    def is_operating_today(self):
+        return self.operate_date == timezone.localdate()
+
 class Menu(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)

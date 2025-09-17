@@ -48,12 +48,11 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class BoothListSerializer(serializers.ModelSerializer):
     location = LocationSerializer()
-    likes_count = serializers.IntegerField()
-    is_liked = serializers.BooleanField()
+    #likes_count = serializers.IntegerField()
+    #is_liked = serializers.BooleanField()
     has_event_now = serializers.BooleanField()
     today_open_time = serializers.SerializerMethodField()
     today_close_time = serializers.SerializerMethodField()
-    is_open_now = serializers.SerializerMethodField()
     distance_m = serializers.SerializerMethodField()
 
     class Meta:
@@ -62,33 +61,29 @@ class BoothListSerializer(serializers.ModelSerializer):
             "id", "name", "category", "image_url", "is_night",
             "is_dorder",
             "location",
-            "today_open_time", "today_close_time", "is_open_now",
-            "likes_count", "is_liked", "has_event_now",
+            "today_open_time", "today_close_time",
+            # "likes_count", "is_liked", 
+            "has_event_now",
             "distance_m"
         ]
 
+    def _get_schedule_for_date(self, obj: Booth):
+        date = self.context.get("date", timezone.localdate())
+        return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
+
     def get_today_open_time(self, obj):
-        schedule = obj.boothschedule_set.first()
-        return schedule.start_time if schedule else None
+        schedule = self._get_schedule_for_date(obj)
+        return schedule.start_time.strftime("%H:%M") if schedule else None
 
     def get_today_close_time(self, obj):
-        schedule = obj.boothschedule_set.first()
-        return schedule.end_time if schedule else None
-
-    def get_is_open_now(self, obj):
-        from django.utils import timezone
-        now = timezone.localtime().time()
-        schedule = obj.boothschedule_set.first()
-        return schedule and schedule.start_time <= now <= schedule.end_time
-
+        schedule = self._get_schedule_for_date(obj)
+        return schedule.end_time.strftime("%H:%M") if schedule else None
+    
     def get_distance_m(self, obj: Booth):
         distance = getattr(obj, "distance_m", None)
-
         if distance is None:
             return None
-        # 정수 변환
         try:
             return int(round(float(distance)))
         except (TypeError, ValueError):
-            # 타입이 이상하면 안전하게 None
             return None

@@ -17,7 +17,7 @@ class BoothViewSet(viewsets.ViewSet):
     def booth_list(self, request):
         """
         POST /booths/list/
-        부스 목록 조회 (필터/정렬/페이징)
+        부스 목록 조회 (필터/정렬)
         """
         data = request.data
 
@@ -25,21 +25,25 @@ class BoothViewSet(viewsets.ViewSet):
         types = data.get("types")
         building_id = data.get("building_id")
         user_location = data.get("user_location")
-        has_event_history = data.get("has_event", False)
         ordering = data.get("ordering", "auto")
         top_liked_3 = data.get("top_liked_3", False)
+
+        if user_location and not ("x" in user_location and "y" in user_location):
+            return Response(
+                {"error": "user_location must include x and y"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         booths = get_booth_list(
             date=date,
             types=types,
             building_id=building_id,
-            user_location=user_location,
-            has_event_history=has_event_history,
+            user_location= user_location,
             ordering=ordering,
             top_liked_3=top_liked_3
         )
 
-        serializer = BoothListSerializer(booths, many=True)
+        serializer = BoothListSerializer(booths, many=True, context={"date": date})
 
         return Response({
             "results": serializer.data
