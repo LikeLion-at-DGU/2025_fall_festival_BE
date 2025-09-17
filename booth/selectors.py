@@ -58,6 +58,40 @@ def get_toilet_detail(booth_id: int) -> Booth:
           raise ValueError("요청한 부스의 카테고리가 화장실이 아님")
      return booth
 
+
+def get_foodtruck_detail(booth_id: int) -> Booth:
+     """
+     category가 FoodTruck인 booth 상세정보 반환
+     """
+     booth = get_object_or_404(
+          Booth.objects.select_related("location")
+          .prefetch_related("menu_set", "boothschedule_set"),
+          id=booth_id
+     )
+     if booth.category != Booth.Category.FOODTRUCK:
+          raise ValueError("요청한 부스의 카테고리가 푸드트럭이 아님")
+     return booth
+
+
+def get_drink_detail(booth_id: int) -> Booth:
+     """
+     category가 Drink인 booth 상세정보 반환
+     """
+     booth = get_object_or_404(Booth, id=booth_id)
+     if booth.category != Booth.Category.DRINK:
+          raise ValueError("요청한 부스의 카테고리가 주류 판매가 아님")
+     return booth
+
+
+def get_toilet_detail(booth_id: int) -> Booth:
+     """
+     category가 Toilet인 booth 상세정보 반환
+     """
+     booth = get_object_or_404(Booth, id=booth_id)
+     if booth.category != Booth.Category.TOILET:
+          raise ValueError("요청한 부스의 카테고리가 화장실이 아님")
+     return booth
+
 #Booth 목록 조회용 selector
 def get_booth_list(date=None, types=None, building_id=None, user_location=None,
                     ordering="auto", top_liked_3=False, is_night=None):
