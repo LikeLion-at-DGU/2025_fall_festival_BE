@@ -4,11 +4,11 @@ from .models import Translation
 
 CACHE_TTL = int(os.getenv("TRANSLATION_CACHE_TTL_SEC", "86400"))
 
-def _key(entity_type, entity_id, field, target_lang):
-    return f"translation:{entity_type}:{entity_id}:{field}:{target_lang}"
+def _key(entity_type, entity_id, field, target_lang, checksum):
+    return f"translation:{entity_type}:{entity_id}:{field}:{target_lang}:{checksum}"
 
-def get_translation(entity_type, entity_id, field, target_lang):
-    key = _key(entity_type, entity_id, field, target_lang)
+def get_translation(entity_type, entity_id, field, target_lang, checksum):
+    key = _key(entity_type, entity_id, field, target_lang, checksum)
     hit = cache.get(key)
     if hit:
         return hit
@@ -20,6 +20,7 @@ def get_translation(entity_type, entity_id, field, target_lang):
             field=field,
             target_lang=target_lang,
             status="ok",
+            checksum=checksum,
         )
         data = {
             "translated_text": obj.translated_text,
