@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'booth',
     'common',
     'dorder',
-    'event',
     'game',
     'stage',
     
