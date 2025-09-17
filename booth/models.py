@@ -20,7 +20,7 @@ class Booth(models.Model):
     category = models.CharField(
         max_length=10,
         choices=Category.choices,
-        default=Category.booth,
+        default=Category.BOOTH,
     )
     is_night = models.BooleanField(default=False)
     image_url = models.CharField(max_length=200, blank=True, null=True)
@@ -33,7 +33,7 @@ class Menu(models.Model):
     name = models.CharField(max_length=30)
     price = models.IntegerField()
     image_url = models.CharField(max_length=200, blank=True, null=True)
-    ingrediant = models.IntegerField()
+    ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
     
 class BoothDetail(models.Model):
