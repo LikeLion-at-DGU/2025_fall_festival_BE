@@ -2,15 +2,54 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
 from .models import Booth
-from .serializers import ToiletDetailSerializer, DrinkDetailSerializer
-from .services import get_toilet_detail, get_drink_detail
+from .selectors import get_booth_list, get_toilet_detail, get_drink_detail, get_foodtruck_detail
+from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer, FoodtruckDetailSerializer, DayBoothDetailSerializer, NightBoothDetailSerializer
+
 
 class BoothViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
+
+    @action(detail=False, methods=["post"], url_path="list")
+    def booth_list(self, request):
+        """
+        POST /booths/list/
+        부스 목록 조회 (필터/정렬)
+        """
+        data = request.data
+
+        date = data.get("date")
+        types = data.get("types")
+        building_id = data.get("building_id")
+        user_location = data.get("user_location")
+        ordering = data.get("ordering", "auto")
+        top_liked_3 = data.get("top_liked_3", False)
+        is_night = data.get("is_night")
+
+        if user_location and not ("x" in user_location and "y" in user_location):
+            return Response(
+                {"error": "user_location must include x and y"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        booths = get_booth_list(
+            date=date,
+            types=types,
+            building_id=building_id,
+            user_location= user_location,
+            ordering=ordering,
+            top_liked_3=top_liked_3,
+            is_night=is_night
+        )
+
+        serializer = BoothListSerializer(booths, many=True, context={"date": date})
+
+        return Response({
+            "results": serializer.data
+        }, status=status.HTTP_200_OK)
+    
 
     @action(detail=False, methods=["get"], url_path=r"detail/(?P<pk>\d+)")
     def booth_detail(self, request, pk=None): 
@@ -31,5 +70,22 @@ class BoothViewSet(viewsets.ViewSet):
             serializer = DrinkDetailSerializer(booth)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+        # 푸드트럭 상세
+        elif booth.category == Booth.Category.FOODTRUCK:
+            booth = get_foodtruck_detail(pk)
+            serializer = FoodtruckDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # 주간부스 상세
+        elif booth.category == Booth.Category.BOOTH and not booth.is_night:
+            serializer = DayBoothDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # 야간부스 상세
+        elif booth.category == Booth.Category.BOOTH and booth.is_night:
+            serializer = NightBoothDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
+
 

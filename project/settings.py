@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'booth',
     'common',
     'dorder',
-    'event',
     'game',
     'stage',
     
@@ -159,19 +158,19 @@ TIME_ZONE = 'Asia/Seoul'
 
 USE_I18N = True
 
-USE_TZ = False
+USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
@@ -203,20 +202,34 @@ CORS_ALLOWED_ORIGINS = [
     "https://2025fallfestivaldgu.netlify.app",
 ]
 
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
-        # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# AWS_STORAGE_BUCKET_NAME = "dummy-bucket"
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "translation-cache",
+# STORAGES = {
+#     "default": {
+#         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#     },
+#     "staticfiles": {
+#         # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
+#         # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
+#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#     },
+# }
+
+import os
+
+if os.getenv("USE_S3") == "true":
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
     }
-}
+else:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        }, 
+    }
+    
+MEDIA_URL = '/media/'
