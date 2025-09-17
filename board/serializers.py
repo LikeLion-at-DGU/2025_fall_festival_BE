@@ -1,59 +1,62 @@
-<<<<<<< HEAD
-# API 입출력 형태를 결정
 from rest_framework import serializers
 from drf_polymorphic.serializers import PolymorphicSerializer
-=======
-# board/serializers.py
-from rest_framework import serializers
->>>>>>> 465ea7eed585c7d637fc43beb5f2b7494211757b
 from .models import *
 
 class BoardSerializer(serializers.ModelSerializer):
+    writer = serializers.SerializerMethodField()
+
     class Meta:
         model = Board
-<<<<<<< HEAD
-        fields = "__all__"
+        fields = ['id', 'category', 'writer']
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    # 구현 필요! uid와 비교하여 adminuser 이름 넣어주기
+    def get_writer(self, obj):
+        if hasattr(obj, "adminuser") and obj.adminuser:
+            return obj.adminuser.name
+        return None
 
 class NoticeSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
         model = Notice
+        fields = ['id', 'category', 'title', 'content', 'is_emergency', 'writer']
 
 class LostSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
         model = Lost
+        fields = ['id', 'category', 'title', 'content', 'location', 'image', 'writer']
 
-class BoardPolymorphicSerializer(PolymorphicSerializer):
-    model_serializer_mapping = {
-        Notice: NoticeSerializer,
-        Lost: LostSerializer,
-    }
+# class BoardPolymorphicSerializer(PolymorphicSerializer):
 
-# class BoardListSerializer(serializers.ModelSerializer):
+#     serializer_mapping = {
+#         Notice: NoticeSerializer,
+#         Lost: LostSerializer,
+#     }
 
-#   # admin_id = serializers.SerializerMethodField(read_only=True)
-#   # admin_name = serializers.SerializerMethodField(read_only=True)
-#   # booth_id = serializers.SerializerMethodField(read_only=True)
-#   # booth_name = serializers.SerializerMethodField(read_only=True)
-#   category = serializers.SerializerMethodField()
+class NoticeListSerializer(BoardSerializer):
+    class Meta(BoardSerializer.Meta):
+        model = Notice
+        fields = ['id', 'category', 'title', 'writer']
 
-#   class Meta:
-#     model = Board
-#     fields = [
-#       "id",
-#       "title",
-#       "content",
-#       "category",
-#       "created_at",
-#     ]
-#     read_only_fields = ['id', 'created_at']
 
-#   def get_category(self, obj):
-#       return obj.__class__.__name__
-  
-=======
-        fields = ['id', 'category','created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+class LostListSerializer(BoardSerializer):
+    class Meta(BoardSerializer.Meta):
+        model = Lost
+        fields = ['id', 'category', 'title', 'writer']
+
+class BoardListSerializer(serializers.Serializer):
+
+    def to_representation(self, instance):
+        data = None
+        if isinstance(instance, Notice):
+            data = NoticeListSerializer(instance).data
+        elif isinstance(instance, Lost):
+            data = LostListSerializer(instance).data
+        else:
+            data = super().to_representation(instance)
+
+        data.pop("polymorphic_ctype", None)
+        return data
 
 class BoothEventSerializer(serializers.ModelSerializer):
     booth_id = serializers.IntegerField(source='booth.id', read_only=True)
@@ -69,4 +72,3 @@ class BoothEventSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return BoothEvent.objects.create(**validated_data)
->>>>>>> 465ea7eed585c7d637fc43beb5f2b7494211757b

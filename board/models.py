@@ -31,11 +31,15 @@ class Notice(Board):
 
 
 #분실물
+def image_upload_path(instance, filename):
+  return f'board_images/{instance.pk}/{filename}'
+
 class Lost(Board):
     title = models.CharField(max_length=200)
     content = models.TextField()
     location = models.CharField(max_length=200)
-    
+    image = models.ImageField(upload_to=image_upload_path, blank=True, null=True)
+
     def save(self, *args, **kwargs):
         self.category = Board.Category.LOSTITEM
         super().save(*args, **kwargs)
