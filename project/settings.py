@@ -202,6 +202,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://2025fallfestivaldgu.netlify.app",
 ]
 
+<<<<<<< HEAD
 USE_S3 = env.bool("USE_S3", default=False)
 
 if USE_S3:
@@ -223,3 +224,34 @@ else:
     # S3 관련 패키지 제거
     if 'storages' in INSTALLED_APPS:
         INSTALLED_APPS.remove('storages')
+=======
+# AWS_STORAGE_BUCKET_NAME = "dummy-bucket"
+
+# STORAGES = {
+#     "default": {
+#         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#     },
+#     "staticfiles": {
+#         # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
+#         # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
+#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#     },
+# }
+
+import os
+
+if os.getenv("USE_S3") == "true":
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+>>>>>>> 5da09ca7b89b638d488ac262bf5e4923a4e7d16d
