@@ -1,0 +1,69 @@
+name: CI/CD to EC2
+
+on:
+  push:
+    branches:
+      - '*'  # CI
+  pull_request:
+    branches:
+      - dev  # PR 머지 후 CD
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'  # Python 3.12 사용
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: python manage.py test  # 테스트가 있으면 앱 이름 추가 (e.g., board booth)
+
+      - name: Check makemigrations
+        run: python manage.py makemigrations --dry-run --check  # 마이그레이션 필요 여부 확인
+
+  cd:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public  # private으로 변경 가능
+
+      - name: Build and push Docker image
+        env:
+          ECR_REPOSITORY: 2025-fall-festival-be  # ECR 리포지토리 이름
+          IMAGE_TAG: ${{ github.sha }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}  # Secrets에서 가져옴
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}  # Secrets에서 가져옴
+        run: |
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/2025_fall_festival_BE || exit
+            git pull origin main
+            docker login $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com -u AWS -p $(aws ecr get-login-password --region $AWS_REGION)
+            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+            docker-compose down
+            docker-compose up -d
+            docker system prune -f  # 불필요 이미지 정리
