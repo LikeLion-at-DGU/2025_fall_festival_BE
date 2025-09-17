@@ -19,7 +19,7 @@ class Booth(models.Model):
         STORE = 'Store', '편의점'
         BOOTH = 'Booth', '부스'
     
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)    
+    #admin = models.ForeignKey(Admin, on_delete=models.CASCADE)    
     name = models.CharField(max_length=30)
     category = models.CharField(
         max_length=10,
@@ -51,7 +51,10 @@ class Menu(models.Model):
     image_url = models.CharField(max_length=200, blank=True, null=True)
     ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
-    
+
+class Corner(models.Model):
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
+    name = models.CharField(max_length=30)
     
 class BoothSchedule(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)

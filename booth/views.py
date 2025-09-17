@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 
 from .models import Booth
 from .selectors import get_booth_list, get_toilet_detail, get_drink_detail, get_foodtruck_detail
-from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer, FoodtruckDetailSerializer
+from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer, FoodtruckDetailSerializer, DayBoothDetailSerializer, NightBoothDetailSerializer
 
 class BoothViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -67,12 +67,22 @@ class BoothViewSet(viewsets.ViewSet):
             serializer = DrinkDetailSerializer(booth)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        #푸드트럭 상세
+        # 푸드트럭 상세
         elif booth.category == Booth.Category.FOODTRUCK:
             booth = get_foodtruck_detail(pk)
             serializer = FoodtruckDetailSerializer(booth)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+        # 주간부스 상세
+        elif booth.category == Booth.Category.BOOTH and not booth.is_night:
+            serializer = DayBoothDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # 야간부스 상세
+        elif booth.category == Booth.Category.BOOTH and booth.is_night:
+            serializer = NightBoothDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
 
 
