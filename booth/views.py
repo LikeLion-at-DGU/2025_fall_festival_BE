@@ -2,13 +2,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
 from .models import Booth
-from .selectors import get_booth_list
-from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer
-from .services import get_toilet_detail, get_drink_detail
+from .selectors import get_booth_list, get_toilet_detail, get_drink_detail, get_foodtruck_detail
+from .serializers import ToiletDetailSerializer, DrinkDetailSerializer, BoothListSerializer, FoodtruckDetailSerializer
 
 class BoothViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -69,6 +67,12 @@ class BoothViewSet(viewsets.ViewSet):
         elif booth.category == Booth.Category.DRINK:
             booth = get_drink_detail(pk)
             serializer = DrinkDetailSerializer(booth)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        #푸드트럭 상세
+        elif booth.category == Booth.Category.FOODTRUCK:
+            booth = get_foodtruck_detail(pk)
+            serializer = FoodtruckDetailSerializer(booth)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
