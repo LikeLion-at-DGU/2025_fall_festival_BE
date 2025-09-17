@@ -1,17 +1,44 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
 
 from .models import *
-from .selectors import *
 from .serializers import *
+from .services import *
+from .selectors import *
 import random
 
-class BoothViewSet(viewsets.ViewSet):
-    permission_classes = [AllowAny]
-
+class BoothViewSet(viewsets.ModelViewSet):
+    
+    def get_serializer_class(self):
+        if self.action == "list":
+            return BoothListSerializer
+        
+        return BoothListSerializer
+    
+    def get_queryset(self):
+        queryset = Booth.objects.all()
+        keyword = self.request.query_params.get("keyword")
+        if keyword:
+            queryset = queryset.filter(
+                Q(name__icontains=keyword) |
+                Q(admin__name__icontains = keyword)
+            )
+        return queryset
+    
+    # 목록 조회 (GET /booths?keyword=사자)
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({"results": serializer.data})
+    
+    
     @action(detail=False, methods=["post"], url_path="list")
     def booth_list(self, request):
         """
@@ -49,7 +76,7 @@ class BoothViewSet(viewsets.ViewSet):
         return Response({
             "results": serializer.data
         }, status=status.HTTP_200_OK)
-    
+
 
     @action(detail=False, methods=["post"], url_path="nearby")
     def nearby_booths(self, request):
