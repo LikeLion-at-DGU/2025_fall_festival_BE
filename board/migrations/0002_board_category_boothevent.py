@@ -8,7 +8,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("board", "0001_initial"),
-        ("booth", "0002_booth_operate_date"),
     ]
 
     operations = [
