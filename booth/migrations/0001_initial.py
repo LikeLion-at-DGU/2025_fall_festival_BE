@@ -77,6 +77,7 @@ class Migration(migrations.Migration):
                 ("longitude", models.FloatField()),
                 ("map_x", models.FloatField()),
                 ("map_y", models.FloatField()),
+                ("description", models.CharField(blank=True, max_length=30)),
             ],
         ),
         migrations.CreateModel(
