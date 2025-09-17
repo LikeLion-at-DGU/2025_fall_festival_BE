@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+from adminuser.models import Admin
 
 # Create your models here.
 class Location(models.Model):
@@ -15,7 +17,8 @@ class Booth(models.Model):
         DRINK = 'Drink', '주류판매'
         STORE = 'Store', '편의점'
         BOOTH = 'Booth', '부스'
-        
+    
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)    
     name = models.CharField(max_length=30)
     category = models.CharField(
         max_length=10,
@@ -24,10 +27,22 @@ class Booth(models.Model):
     )
     is_night = models.BooleanField(default=False)
     image_url = models.CharField(max_length=200, blank=True, null=True)
-    is_liked = models.BooleanField(default=False)
     is_event = models.BooleanField(default=False)
+    is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
+    operate_date = models.DateField()
     
+    def is_operating_today(self):
+        return self.operate_date == timezone.localdate()
+
+    
+class BoothDetail(models.Model):
+    booth = models.OneToOneField(Booth, on_delete=models.CASCADE)
+    all_table = models.IntegerField()
+    usage_table = models.IntegerField()
+    can_usage = models.BooleanField(default=True)
+    description = models.TextField()
+
 class Menu(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
@@ -36,11 +51,6 @@ class Menu(models.Model):
     ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
     
-class BoothDetail(models.Model):
-    all_table = models.IntegerField()
-    usage_table = models.IntegerField()
-    can_usage = models.BooleanField(default=True)
-    description = models.TextField()
     
 class BoothSchedule(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
