@@ -50,7 +50,7 @@ class BoothViewSet(viewsets.ViewSet):
             "results": serializer.data
         }, status=status.HTTP_200_OK)
     
-    
+
     @action(detail=False, methods=["post"], url_path="nearby")
     def nearby_booths(self, request):
         """
@@ -60,6 +60,7 @@ class BoothViewSet(viewsets.ViewSet):
         """
         data = request.data
         user_location = data.get("user_location")
+        is_night = data.get("is_night")
         if not user_location or "x" not in user_location or "y" not in user_location:
             return Response({"error": "user_location must include x, y"}, status=400)
 
@@ -84,6 +85,9 @@ class BoothViewSet(viewsets.ViewSet):
         # 2) 해당 location의 booth 조회
         booths = list(Booth.objects.filter(location=nearest_location))
 
+        if isinstance(is_night, bool):
+            booths = booths.filter(is_night=is_night)
+
         # 3) 랜덤 3개 선택
         if len(booths) > 3:
             booths = random.sample(booths, 3)
@@ -95,6 +99,7 @@ class BoothViewSet(viewsets.ViewSet):
             "distance_m": int(round(min_dist)),
             "booths": serializer.data
         }, status=200)
+    
 
     @action(detail=False, methods=["get"], url_path=r"detail/(?P<pk>\d+)")
     def booth_detail(self, request, pk=None): 
