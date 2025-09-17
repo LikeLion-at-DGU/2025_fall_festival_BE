@@ -2,13 +2,14 @@ from django.db import models
 from django.utils import timezone
 from adminuser.models import Admin
 
-# Create your models here.
+
 class Location(models.Model):
     name = models.CharField(max_length=30)
     latitude = models.FloatField()
     longitude = models.FloatField()
     map_x = models.FloatField()
     map_y = models.FloatField()
+    description = models.CharField(max_length=30)
 
 class Booth(models.Model):
     class Category(models.TextChoices):
