@@ -1,73 +1,60 @@
-# API 입출력형태를 결정
-from django.shortcuts import render
-from rest_framework import viewsets, status
+# board/views.py
+from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework import status
 
 from .models import *
 from .serializers import *
 
-# 총학 공지 등록
-class BoardViewSet(viewsets.ModelViewSet):
-    queryset = Board.objects.all().order_by("-created_at")
-    serializer_class = BoardPolymorphicSerializer
-    authentication_classes = []
-    permission_classes = [AllowAny]
-
-    # def get_serializer_class(self):
-    #     if self.action == "create":
-    #         return BoardPolymorphicSerializer
-    #     elif self.action in ["list", "retrieve"]:
-    #         return BoardListSerializer
-    #     return BoardPolymorphicSerializer
-
-    
-
-    # def list(self, request, *args, **kwargs):
-    #     queryset = self.get_queryset()
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     total_count = queryset.count()
-    #     return Response({
-    #         "message": "게시글 목록 조회에 성공하였습니다.", 
-    #         "total_count": total_count,
-    #         "board": serializer.data
-    #     })
-
-# 분실물 게시물 LOST Item 모델 추가
-# post 생성 권한은 총학, 부스, admin에게만 있음
-# admin/post 이렇게 할 필요가 있을까? 흠..
+# uid 가 request 로 오고 admin의 code에 저장
+# 간단 토큰 저장소 (실제 배포시 DB나 Redis 사용)
+TOKEN_STORE = {
+    "A1B2C3D4": 1,  # token: admin_id
+    "B2C3D4E5": 2,
+}
 
 
-class NoticeViewSet(viewsets.ModelViewSet):
-    queryset = Notice.objects.all().order_by("-created_at")
-    serializer_class = NoticeSerializer
-    authentication_classes = []
-    permission_classes = [AllowAny]
+def get_admin_from_token(request):
+    token = request.headers.get('Authorization')
+    if not token or token not in TOKEN_STORE:
+        return None
+    from adminuser.models import Admin
+    try:
+        return Admin.objects.get(id=TOKEN_STORE[token])
+    except Admin.DoesNotExist:
+        return None
 
+class BoothEventViewSet(viewsets.ModelViewSet):
+    queryset = BoothEvent.objects.all()
+    serializer_class = BoothEventSerializer
+
+    # POST /board/events/
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        board = serializer.save()
+        # 1. 토큰으로 admin 확인
+        admin = get_admin_from_token(request)
+        if not admin:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        return Response(
-            {"message": "공지 작성이 완료되었습니다.", "board_id": board.id},
-            status=status.HTTP_201_CREATED,
+        # 2. role 체크 (동아리, 학과만 허용)
+        if admin.role not in ['Club', '동아리','Major', '학과']:
+            return Response({"error": "권한이 없습니다. 동아리/학과 관리자만 이벤트 생성 가능"}, 
+                            status=status.HTTP_403_FORBIDDEN)
+
+        
+        # 3. admin 소속 Booth 가져오기
+        try:
+            booth = Booth.objects.get(admin=admin)
+        except Booth.DoesNotExist:
+            return Response({"error": "관리자 소속 부스가 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. 이벤트 생성
+        booth_event = BoothEvent.objects.create(
+            booth=booth,
+            title=request.data.get('title'),
+            detail=request.data.get('detail'),
+            start_time=request.data.get('start_time'),
+            end_time=request.data.get('end_time')
         )
 
-
-# Lost 전용 CRUD
-class LostViewSet(viewsets.ModelViewSet):
-    queryset = Lost.objects.all().order_by("-created_at")
-    serializer_class = LostSerializer
-    authentication_classes = []
-    permission_classes = [AllowAny]
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        board = serializer.save()
-
-        return Response(
-            {"message": "분실물이 등록되었습니다.", "board_id": board.id, "board_title": board.title},
-            status=status.HTTP_201_CREATED,
-        )
+        serializer = self.get_serializer(booth_event)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
