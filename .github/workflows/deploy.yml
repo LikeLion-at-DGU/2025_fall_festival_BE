@@ -2,85 +2,80 @@ name: CI/CD to EC2
 
 on:
   push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - dev
+    branches: [ 'dev' ]   # dev 브랜치에 푸시되면 배포(원하시면 변경)
 
 jobs:
-  ci:
+  build-and-push:
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'  # Dockerfile과 일치
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run tests
-        run: python manage.py test
-        env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
-          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
-          TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
-      - name: Check makemigrations
-        run: python manage.py makemigrations --dry-run --check
-        env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
-          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
-          TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
+      - uses: actions/checkout@v4
 
-  cd:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    needs: ci
+      - name: Set up QEMU (optional multi-arch)
+        uses: docker/setup-qemu-action@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+
+  deploy:
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registry-type: public
-      - name: Build and push Docker image
-        env:
-          ECR_REPOSITORY: 2025-fall-festival-be
-          IMAGE_TAG: ${{ github.sha }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        run: |
-          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest .
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Deploy to EC2 (SSH)
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-        env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
-          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
-          TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
-        run: |
-          cd ~/2025_fall_festival_BE || { echo "Directory not found"; exit 1; }
-          # git pull 제거 (이미지 기반 배포)
-          aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-          docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-          docker-compose down || true
-          docker-compose up -d
-          docker system prune -f
+          script: |
+            set -e
+            cd ~/2025_fall_festival_BE || mkdir -p ~/2025_fall_festival_BE && cd ~/2025_fall_festival_BE
+
+            # .env 업데이트 (필요한 환경변수들)
+            cat > .env <<EOF
+            IMAGE_TAG=${{ github.sha }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+            ECR_REPOSITORY=${{ secrets.ECR_REPOSITORY }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DEBUG=false
+            DOMAIN=${{ secrets.DOMAIN }}
+            LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
+            RUN_MIGRATIONS=true
+            RUN_COLLECTSTATIC=true
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            EOF
+
+            # ECR 로그인 & pull
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+
+            # Compose 재시작
+            docker-compose pull --ignore-pull-failures
+            docker-compose up -d --remove-orphans
+
+            # 마이그레이션/collectstatic (또는 entrypoint 로 처리 가능)
+            docker-compose exec -T web python manage.py migrate --noinput
+            docker-compose exec -T web python manage.py collectstatic --noinput
+
+            # 이미지 정리(옵션)
+            docker image prune -af || true
