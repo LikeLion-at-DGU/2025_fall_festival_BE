@@ -3,10 +3,10 @@ name: CI/CD to EC2
 on:
   push:
     branches:
-      - '*'  # CI
+      - '*'
   pull_request:
     branches:
-      - dev  # PR 머지 후 CD
+      - dev
 
 jobs:
   ci:
@@ -14,68 +14,74 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'  # Python 3.12 사용
-
+          python-version: '3.12'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Run tests
-        run: python manage.py test  # 테스트가 있으면 앱 이름 추가 (e.g., board booth)
+        run: python manage.py test
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}  # 선택적
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # 선택적
-
+          DEBUG: ${{ secrets.DEBUG }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - name: Check makemigrations
-        run: python manage.py makemigrations --dry-run --check  # 마이그레이션 필요 여부 확인
+        run: python manage.py makemigrations --dry-run --check
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}  # 선택적
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # 선택적
+          DEBUG: ${{ secrets.DEBUG }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   cd:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registry-type: public  # private으로 변경 가능
-
+          registry-type: public
       - name: Build and push Docker image
         env:
-          ECR_REPOSITORY: 2025-fall-festival-be  # ECR 리포지토리 이름
+          ECR_REPOSITORY: 2025-fall-festival-be
           IMAGE_TAG: ${{ github.sha }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}  # Secrets에서 가져옴
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}  # Secrets에서 가져옴
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
           docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-
       - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3  # 최신 버전 사용 권장
+        uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          env:  # 환경 변수 전달
-            SECRET_KEY: ${{ secrets.SECRET_KEY }}
-            DEBUG: ${{ secrets.DEBUG }}  # 선택적
-            DATABASE_URL: ${{ secrets.DATABASE_URL }}  # 선택적
           script: |
-            cd ~/2025_fall_festival_BE || exit
-            git pull origin dev
-            docker login $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com -u AWS -p $(aws ecr get-login-password --region $AWS_REGION)
+            cd ~/2025_fall_festival_BE || { echo "Directory not found"; exit 1; }
+            git pull origin dev || { echo "Git pull failed"; exit 1; }
+            
+            # AWS 환경변수 설정
+            export AWS_REGION=${{ secrets.AWS_REGION }}
+            export AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+            export ECR_REPOSITORY=2025-fall-festival-be
+            export IMAGE_TAG=${{ github.sha }}
+            
+            # 환경변수 파일 생성 (.env)
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env
+            echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+            echo "DATABASE_URL=postgresql://myuser:mypassword@db:5432/mydb" >> .env
+            echo "GITHUB_SHA=${{ github.sha }}" >> .env
+            
+            # ECR 로그인 및 이미지 풀
+            aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
             docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-            docker-compose down
+            
+            # 컨테이너 재시작
+            docker-compose down || true
             docker-compose up -d
-            docker system prune -f  # 불필요 이미지 정리
+            docker system prune -f
