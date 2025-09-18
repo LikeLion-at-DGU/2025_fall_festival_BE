@@ -1,22 +1,169 @@
 from rest_framework import serializers
-from .models import Booth, Menu, BoothSchedule
+from .models import *
 
-class DrinkMenuSerializer(serializers.ModelSerializer):
+from rest_framework import serializers
+from .models import Booth, Location
+
+class LocationSerializer(serializers.ModelSerializer):
+    lat = serializers.FloatField(source="latitude")
+    lng = serializers.FloatField(source="longitude")
+
+    class Meta:
+        model = Location
+        fields = ["id", "name", "lat", "lng"]
+
+class BoothListSerializer(serializers.ModelSerializer):
+    booth_id = serializers.IntegerField(source="id")
+    location = LocationSerializer()
+    likes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_event = serializers.BooleanField()
+    business_days = serializers.SerializerMethodField()
+    start_time = serializers.SerializerMethodField()
+    end_time = serializers.SerializerMethodField()
+    distance_m = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Booth
+        fields = [
+            "booth_id",
+            "name","category",
+            "image_url",
+            "is_night","is_dorder","is_event",
+            "location", "distance_m",
+            "business_days","start_time","end_time",
+            "likes_count", "is_liked",
+        ]
+
+    def get_business_days(self, obj):
+        return list(
+            obj.boothschedule_set.values_list("day", flat=True).distinct()
+        )
+        
+    def _get_schedule_for_date(self, obj: Booth):
+        date = self.context.get("date", timezone.localdate())
+        return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
+    
+    def get_likes_count(self, obj):
+        # 임시 디폴트값 리턴
+        return 0  
+
+    def get_is_liked(self, obj):
+        # 임시 디폴트값 리턴
+        return False
+
+    def get_start_time(self, obj):
+        first_schedule = obj.boothschedule_set.order_by("start_time").first()
+        return first_schedule.start_time.strftime("%H:%M") if first_schedule else None
+
+    def get_end_time(self, obj):
+        last_schedule = obj.boothschedule_set.order_by("-end_time").first()
+        return last_schedule.end_time.strftime("%H:%M") if last_schedule else None
+
+    def get_distance_m(self, obj: Booth):
+        distance = getattr(obj, "distance_m", None)
+        if distance is None:
+            return None
+        try:
+            return int(round(float(distance)))
+        except (TypeError, ValueError):
+            return None
+
+##################################################################
+class MenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
         fields = ["name", "price", "image_url"]
 
+class DorderMenuSerializer(serializers.ModelSerializer):
+    is_best = serializers.SerializerMethodField()
+    is_soldout = serializers.SerializerMethodField()
 
-class DrinkScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Menu
+        fields = ["name", "price", "image_url", "is_best", "is_soldout"]
+
+    def get_is_best(self, obj):
+        booth = obj.booth
+        # sold 내림차순 + id 오름차순
+        top3_ids = (
+            booth.menu_set.order_by("-sold", "id")[:3].values_list("id", flat=True)
+        )
+        return obj.id in top3_ids
+
+    def get_is_soldout(self, obj):
+        return obj.ingredient < 5
+
+class CornerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Corner
+        fields = ["name"]
+
+class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = BoothSchedule
         fields = ["day", "start_time", "end_time"]
+        
+class DayBoothDetailSerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(source="location.name", read_only=True)
+    location_description = serializers.CharField(source="location.description", read_only=True)
+    schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
+    corners = CornerSerializer(source="corner_set", many=True, read_only=True)
+    booth_description = serializers.CharField(source="boothdetail.description", read_only=True)
 
+    class Meta:
+        model = Booth
+        fields = [
+            "id",
+            "is_night",
+            "name",
+            "image_url",
+            "location_name",
+            "location_description",
+            "schedules",
+            "booth_description",
+            "corners",
+        ]
+        
+class NightBoothDetailSerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(source="location.name", read_only=True)
+    location_description = serializers.CharField(source="location.description", read_only=True)
+    schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
+    menus = DorderMenuSerializer(source="menu_set", many=True, read_only=True)
+    booth_description = serializers.CharField(source="boothdetail.description", read_only=True)
+    booth_can_usage = serializers.CharField(source="boothdetail.can_usage", read_only=True)
 
+    class Meta:
+        model = Booth
+        fields = [
+            "id",
+            "is_night",
+            "name",
+            "is_dorder",
+            "image_url",
+            "location_name",
+            "location_description",
+            "schedules",
+            "booth_description",
+            "booth_can_usage",
+            "menus",
+        ]
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        if not instance.is_dorder:
+            rep.pop("booth_can_usage", None)
+            rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True).data
+        else:
+            rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True).data
+
+        return rep
+    
 class DrinkDetailSerializer(serializers.ModelSerializer):
-    location_name = serializers.CharField(source="location.name") 
-    menus = DrinkMenuSerializer(source="menu_set", many=True, read_only=True)
-    schedules = DrinkScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
+    location_name = serializers.CharField(source="location.name", read_only=True) 
+    location_description = serializers.CharField(source="location.description", read_only=True) 
+    menus = MenuSerializer(source="menu_set", many=True, read_only=True)
+    schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
 
     class Meta:
         model = Booth
@@ -25,16 +172,45 @@ class DrinkDetailSerializer(serializers.ModelSerializer):
             "name",
             "image_url",
             "location_name",
+            "location_description",
             "menus",
             "schedules",
         ]
 
+class FoodtruckDetailSerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(source="location.name", read_only=True) 
+    location_description = serializers.CharField(source="location.description", read_only=True) 
+    menus = MenuSerializer(source="menu_set", many=True, read_only=True)
+    schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
 
-class ToiletDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booth
         fields = [
             "id",
             "name",
             "image_url",
+            "location_name",
+            "location_description",
+            "menus",
+            "schedules",
         ]
+        
+class ToiletDetailSerializer(serializers.ModelSerializer):
+    location_name = serializers.CharField(source="location.name", read_only=True) 
+    location_description = serializers.CharField(source="location.description", read_only=True) 
+    
+    class Meta:
+        model = Booth
+        fields = [
+            "id",
+            "name",
+            "image_url",
+            "location_name",
+            "location_description",
+        ]
+
+
+class DrinkMenuSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Menu
+        fields = ["name", "price", "image_url"]

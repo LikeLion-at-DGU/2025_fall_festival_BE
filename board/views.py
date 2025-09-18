@@ -1,3 +1,189 @@
-from django.shortcuts import render
+# board/views.py
+from rest_framework import viewsets
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import action
 
-# Create your views here.
+from .models import *
+from .serializers import *
+from .services import get_writer_from_uid
+
+    
+# 게시물 생성/수정/조회, 관련 게시물
+# POST /board/notices 또는 losts
+# PATCH, GET /board/{id}
+class BoardViewSet(viewsets.ModelViewSet):
+    queryset = Board.objects.all().order_by("-created_at")
+    serializer_class = BoardPolymorphicSerializer
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            # 리스트 조회용
+            return BoardListSerializer
+        elif self.action in ["retrieve", "update", "partial_update"]:
+            obj = self.get_object()
+            if isinstance(obj, Lost):
+                return LostSerializer
+            elif isinstance(obj, Notice):
+                return NoticeSerializer
+            elif isinstance(obj, BoothEvent):
+                return BoothEventSerializer
+        return BoardPolymorphicSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        total_count = queryset.count()
+        return Response({
+            "message": "게시글 목록 조회에 성공하였습니다.", 
+            "total_count": total_count,
+            "board": serializer.data
+        })
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        board = serializer.save()
+
+        # 긴급 공지 1건은 미리 DB에 등록해두고, id 프론트에 공유 필요
+        if board.is_emergency == True:
+            message = "긴급 공지가 성공적으로 수정되었습니다."
+        else:
+            message = "게시글이 수정되었습니다."
+
+        return Response({
+                "message": message,
+                "board_id": board.id,
+                "board_title": board.title,
+        })
+    
+    # GET /board/{id}/related, 관련 게시물 조회
+    @action(detail=True, methods=["GET"])
+    def related(self, request, pk=None):
+        instance = self.get_object()
+        created_at = instance.created_at
+
+        related = (
+            Board.objects.filter(created_at__gt=created_at)
+            .order_by("created_at")[:3]
+        )
+
+        serializer = BoardListSerializer(related, many=True)
+        return Response({
+            "message": "관련 게시글 조회에 성공하였습니다.",
+            "related": serializer.data
+        })
+    
+    @action(detail=False, methods=["GET", "PATCH"])
+    def emergency(self, request):
+
+        if request.method == "GET":
+            emergency = Notice.objects.filter(is_emergency=True).order_by("created_at").first()
+            if not emergency:
+                return Response({"message": "긴급 공지가 없습니다."}, status=404)
+            serializer = NoticeSerializer(emergency)
+            return Response({"message": "긴급 공지 조회에 성공하였습니다.", "notice": serializer.data})
+
+class NoticeViewSet(viewsets.ModelViewSet):
+    queryset = Notice.objects.all().order_by("-created_at")
+    serializer_class = NoticeSerializer
+
+    def create(self, request, *args, **kwargs):
+        uid = request.data.get("code")  # request로 들어오는 UID
+        writer_name = get_writer_from_uid(uid)
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        board = serializer.save(writer=writer_name)
+
+        return Response(
+            {"message": "공지 작성이 완료되었습니다.", 
+                "board_id": board.id,
+                "writer": board.writer},
+            status=status.HTTP_201_CREATED,
+        )
+    
+    
+    
+# Lost 전용 CRUD
+class LostViewSet(viewsets.ModelViewSet):
+    queryset = Lost.objects.all().order_by("-created_at")
+    serializer_class = LostSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        uid = request.data.get("code")  # request로 들어오는 UID
+        writer_name = get_writer_from_uid(uid)
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        board = serializer.save(writer=writer_name)
+
+        return Response(
+            {"message": "분실물이 등록되었습니다.", 
+                "board_id": board.id, 
+                "writer": board.writer,
+                "board_title": board.title
+                },
+            status=status.HTTP_201_CREATED,
+        )
+    
+
+class BoothEventViewSet(viewsets.ModelViewSet):
+    queryset = BoothEvent.objects.all()
+    serializer_class = BoothEventSerializer
+
+    # POST /board/events/
+    def create(self, request, *args, **kwargs):
+        uid = request.data.get("code")  # 글 작성 시 전달되는 token/UID
+        writer_name = get_writer_from_uid(uid)
+        
+        from adminuser.models import Admin
+        try:
+            admin = Admin.objects.get(code=uid)
+        except Admin.DoesNotExist:
+            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. UID로 Admin 조회
+        from adminuser.models import Admin
+        try:
+            admin = Admin.objects.get(code=uid)
+        except Admin.DoesNotExist:
+            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Admin과 연결된 Booth 가져오기
+        from booth.models import Booth
+        try:
+            booth = Booth.objects.get(admin=admin)
+            booth.is_event = True  # 이벤트 등록됨 표시
+            booth.save()
+        except Booth.DoesNotExist:
+            booth = None  # Booth가 없으면 그냥 넘어감
+        
+        booth_event = BoothEvent.objects.create(
+            writer=writer_name,
+            title=request.data.get('title'),
+            detail=request.data.get('detail'),
+            start_time=request.data.get('start_time'),
+            end_time=request.data.get('end_time')
+        )
+
+        serializer = self.get_serializer(booth_event)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        board = serializer.save()
+
+        return Response({
+            "message": "BoothEvent가 수정되었습니다.",
+            "board_id": board.id,
+            "writer": board.writer,
+            "board_title": board.title
+        })
