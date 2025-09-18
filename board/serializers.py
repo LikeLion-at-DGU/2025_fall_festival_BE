@@ -46,6 +46,11 @@ class LostListSerializer(BoardSerializer):
         model = Lost
         fields = ['id', 'category', 'title', 'writer']
 
+class BoothEventListSerializer(BoardSerializer):
+    class Meta(BoardSerializer.Meta):
+        model = BoothEvent
+        fields = ['id', 'category', 'title', 'writer']
+
 class BoardListSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
@@ -54,6 +59,8 @@ class BoardListSerializer(serializers.Serializer):
             data = NoticeListSerializer(instance).data
         elif isinstance(instance, Lost):
             data = LostListSerializer(instance).data
+        elif isinstance(instance, BoothEvent):
+            data = BoothEventListSerializer(instance).data
         else:
             data = super().to_representation(instance)
 
@@ -63,9 +70,6 @@ class BoardListSerializer(serializers.Serializer):
 class BoothEventSerializer(BoardSerializer):
     booth_id = serializers.IntegerField(source='booth.id', read_only=True)
     booth_name = serializers.CharField(source='booth.admin.name', read_only=True)
-    category = serializers.CharField(source='category', read_only=True)
-    is_active = serializers.SerializerMethodField()
-
     class Meta:
         model = BoothEvent
         fields = BoardSerializer.Meta.fields +['booth_id', 
@@ -74,10 +78,6 @@ class BoothEventSerializer(BoardSerializer):
 
     def create(self, validated_data):
         return BoothEvent.objects.create(**validated_data)
-    
-    def get_is_active(self, obj):
-        now = timezone.now()
-        return obj.endtime > now
     
 class BoardPolymorphicSerializer(PolymorphicSerializer):
     serializer_mapping = {
