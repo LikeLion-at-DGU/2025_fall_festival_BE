@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from drf_polymorphic.serializers import PolymorphicSerializer
-
+from django.utils import timezone
 
 from .models import *
 
@@ -35,13 +35,6 @@ class LostSerializer(BoardSerializer):
         model = Lost
         fields = ['id', 'category', 'title', 'content', 'location', 'image', 'writer']
 
-# class BoardPolymorphicSerializer(PolymorphicSerializer):
-
-#     serializer_mapping = {
-#         Notice: NoticeSerializer,
-#         Lost: LostSerializer,
-#     }
-
 class NoticeListSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
         model = Notice
@@ -71,6 +64,7 @@ class BoothEventSerializer(BoardSerializer):
     booth_id = serializers.IntegerField(source='booth.id', read_only=True)
     booth_name = serializers.CharField(source='booth.admin.name', read_only=True)
     category = serializers.CharField(source='category', read_only=True)
+    is_active = serializers.SerializerMethodField()
 
     class Meta:
         model = BoothEvent
@@ -80,6 +74,10 @@ class BoothEventSerializer(BoardSerializer):
 
     def create(self, validated_data):
         return BoothEvent.objects.create(**validated_data)
+    
+    def get_is_active(self, obj):
+        now = timezone.now()
+        return obj.endtime > now
     
 class BoardPolymorphicSerializer(PolymorphicSerializer):
     model_serializer_mapping = {
