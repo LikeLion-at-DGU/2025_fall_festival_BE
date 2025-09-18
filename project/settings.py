@@ -133,8 +133,11 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         #"common.authentication.CookieJwtAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication", # 기존 JWT 유지
+
+        # UID 인증이 최상단에서 작동되어야 함.
         "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
+
+        "rest_framework_simplejwt.authentication.JWTAuthentication", # 기존 JWT 유지
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         'rest_framework.permissions.AllowAny',  # 기본은 모두 접근 허용, 보호 API만 퍼미션 적용
@@ -211,8 +214,9 @@ CORS_ALLOWED_ORIGINS = [
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-admin-cache",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1", # Redis 변경
+        #"LOCATION": "unique-admin-cache",
     }
 }
 
