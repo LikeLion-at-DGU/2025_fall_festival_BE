@@ -31,10 +31,7 @@ class Booth(models.Model):
     is_event = models.BooleanField(default=False)
     is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
-    operate_date = models.DateField()
-    
-    def is_operating_today(self):
-        return self.operate_date == timezone.localdate()
+    like_cnt = models.IntegerField(default=0)
 
     
 class BoothDetail(models.Model):

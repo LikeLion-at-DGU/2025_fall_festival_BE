@@ -94,13 +94,13 @@ def get_toilet_detail(booth_id: int) -> Booth:
 
 #Booth 목록 조회용 selector
 def get_booth_list(date=None, types=None, building_id=None, user_location=None,
-                    ordering="auto", top_liked_3=False, is_night=None):
+                    ordering="auto", top_liked_3=False, is_night=None, is_event=None):
 
      if not date:
           date = timezone.localdate()
 
      qs = Booth.objects.all().select_related("location")
-     qs = qs.filter(operate_date=date)
+     qs = qs.filter(boothschedule__day=date)
 
      # 종류 필터
      if types:
@@ -113,6 +113,14 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
      # 낮/밤 부스 필터
      if is_night is not None:
           qs = qs.filter(is_night=is_night)
+
+     # 이벤트 필터
+     if is_event is not None:
+          qs = qs.filter(is_event=is_event)
+
+     # 좋아요 Top3 처리
+     if top_liked_3:
+          return qs.order_by("-like_cnt")[:3]
 
      booths = list(qs)
 
@@ -140,9 +148,6 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
           else:
                booths.sort(key=lambda b: b.name)
 
-     #TODO: 좋아요 count + 현재 사용자 좋아요 여부 annotate 필요
-
-     if top_liked_3:
-          booths = booths[:3]
+     #TODO: 현재 사용자 좋아요 여부 annotate 필요
 
      return booths

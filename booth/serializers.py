@@ -15,7 +15,7 @@ class LocationSerializer(serializers.ModelSerializer):
 class BoothListSerializer(serializers.ModelSerializer):
     booth_id = serializers.IntegerField(source="id")
     location = LocationSerializer()
-    likes_count = serializers.SerializerMethodField()
+    like_cnt = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     is_event = serializers.BooleanField()
     business_days = serializers.SerializerMethodField()
@@ -32,24 +32,28 @@ class BoothListSerializer(serializers.ModelSerializer):
             "is_night","is_dorder","is_event",
             "location", "distance_m",
             "business_days","start_time","end_time",
-            "likes_count", "is_liked",
+            "like_cnt", "is_liked",
         ]
 
     def get_business_days(self, obj):
-        return list(
-            obj.boothschedule_set.values_list("day", flat=True).distinct()
-        )
+        days = obj.boothschedule_set.values_list("day", flat=True).distinct()
+        weekday_map = ["월", "화", "수", "목", "금", "토", "일"]
+        return [
+            {
+                "date": str(day),
+                "weekday": weekday_map[day.weekday()]
+            }
+            for day in days
+        ]
         
     def _get_schedule_for_date(self, obj: Booth):
         date = self.context.get("date", timezone.localdate())
         return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
     
-    def get_likes_count(self, obj):
-        # 임시 디폴트값 리턴
-        return 0  
+    def get_like_cnt(self, obj):
+        return obj.like_cnt
 
     def get_is_liked(self, obj):
-        # 임시 디폴트값 리턴
         return False
 
     def get_start_time(self, obj):

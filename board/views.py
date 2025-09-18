@@ -2,14 +2,14 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 
 from .models import *
 from .serializers import *
 from .services import get_writer_from_uid
+from adminuser.services import resolve_admin_by_uid
 
-    
+
 # 게시물 생성/수정/조회, 관련 게시물
 # POST /board/notices 또는 losts
 # PATCH, GET /board/{id}
@@ -60,6 +60,18 @@ class BoardViewSet(viewsets.ModelViewSet):
                 "board_title": board.title,
         })
     
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        board_id = instance.id
+        instance.delete()
+        return Response(
+            {
+                "message": "게시글이 삭제되었습니다.",
+                "board_id": board_id,
+            },
+            status=status.HTTP_200_OK,
+        )
+    
     # GET /board/{id}/related, 관련 게시물 조회
     @action(detail=True, methods=["GET"])
     def related(self, request, pk=None):
@@ -67,8 +79,8 @@ class BoardViewSet(viewsets.ModelViewSet):
         created_at = instance.created_at
 
         related = (
-            Board.objects.filter(created_at__gt=created_at)
-            .order_by("created_at")[:3]
+            Board.objects.filter(created_at__lt=created_at)
+            .order_by("-created_at")[:3]
         )
 
         serializer = BoardListSerializer(related, many=True)
@@ -92,12 +104,17 @@ class NoticeViewSet(viewsets.ModelViewSet):
     serializer_class = NoticeSerializer
 
     def create(self, request, *args, **kwargs):
-        uid = request.data.get("code")  # request로 들어오는 UID
-        writer_name = get_writer_from_uid(uid)
+        uid = request.data.get("uid")
+        admin = resolve_admin_by_uid(uid)
+        if not admin:  
+            return Response(
+                {"message": "유효하지 않은 UID 입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        board = serializer.save(writer=writer_name)
+        board = serializer.save(writer=admin.name)
 
         return Response(
             {"message": "공지 작성이 완료되었습니다.", 
@@ -106,21 +123,23 @@ class NoticeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
     
-    
-    
 # Lost 전용 CRUD
 class LostViewSet(viewsets.ModelViewSet):
     queryset = Lost.objects.all().order_by("-created_at")
     serializer_class = LostSerializer
-    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        uid = request.data.get("code")  # request로 들어오는 UID
-        writer_name = get_writer_from_uid(uid)
+        uid = request.data.get("uid")
+        admin = resolve_admin_by_uid(uid)
+        if not admin:  
+            return Response(
+                {"message": "유효하지 않은 UID 입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        board = serializer.save(writer=writer_name)
+        board = serializer.save(writer=admin.name)
 
         return Response(
             {"message": "분실물이 등록되었습니다.", 
@@ -139,20 +158,26 @@ class BoothEventViewSet(viewsets.ModelViewSet):
     # POST /board/events/
     def create(self, request, *args, **kwargs):
         uid = request.data.get("code")  # 글 작성 시 전달되는 token/UID
-        writer_name = get_writer_from_uid(uid)
-        
-        from adminuser.models import Admin
-        try:
-            admin = Admin.objects.get(code=uid)
-        except Admin.DoesNotExist:
-            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        admin = resolve_admin_by_uid(uid)
+        if not admin:  
+            return Response(
+                {"message": "유효하지 않은 UID 입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # 1. UID로 Admin 조회
-        from adminuser.models import Admin
-        try:
-            admin = Admin.objects.get(code=uid)
-        except Admin.DoesNotExist:
-            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # from adminuser.models import Admin
+        # try:
+        #     admin = Admin.objects.get(code=uid)
+        # except Admin.DoesNotExist:
+        #     return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # # 1. UID로 Admin 조회
+        # from adminuser.models import Admin
+        # try:
+        #     admin = Admin.objects.get(code=uid)
+        # except Admin.DoesNotExist:
+        #     return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 2. Admin과 연결된 Booth 가져오기
         from booth.models import Booth
@@ -164,7 +189,8 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             booth = None  # Booth가 없으면 그냥 넘어감
         
         booth_event = BoothEvent.objects.create(
-            writer=writer_name,
+            booth=booth,
+            writer=admin.name,
             title=request.data.get('title'),
             detail=request.data.get('detail'),
             start_time=request.data.get('start_time'),

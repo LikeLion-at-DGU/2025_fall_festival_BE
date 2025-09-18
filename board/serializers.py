@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from drf_polymorphic.serializers import PolymorphicSerializer
-
+from django.utils import timezone
 
 from .models import *
 
@@ -35,13 +35,6 @@ class LostSerializer(BoardSerializer):
         model = Lost
         fields = ['id', 'category', 'title', 'content', 'location', 'image', 'writer']
 
-# class BoardPolymorphicSerializer(PolymorphicSerializer):
-
-#     serializer_mapping = {
-#         Notice: NoticeSerializer,
-#         Lost: LostSerializer,
-#     }
-
 class NoticeListSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
         model = Notice
@@ -53,6 +46,13 @@ class LostListSerializer(BoardSerializer):
         model = Lost
         fields = ['id', 'category', 'title', 'writer']
 
+class BoothEventListSerializer(BoardSerializer):
+    booth_id = serializers.IntegerField(source='booth.id', read_only=True)
+    booth_is_event = serializers.BooleanField(source='booth.is_event', read_only=True)
+    class Meta(BoardSerializer.Meta):
+        model = BoothEvent
+        fields = ['id', 'category', 'title', 'writer', 'booth_id', 'booth_is_event']
+
 class BoardListSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
@@ -61,6 +61,8 @@ class BoardListSerializer(serializers.Serializer):
             data = NoticeListSerializer(instance).data
         elif isinstance(instance, Lost):
             data = LostListSerializer(instance).data
+        elif isinstance(instance, BoothEvent):
+            data = BoothEventListSerializer(instance).data
         else:
             data = super().to_representation(instance)
 
@@ -70,19 +72,20 @@ class BoardListSerializer(serializers.Serializer):
 class BoothEventSerializer(BoardSerializer):
     booth_id = serializers.IntegerField(source='booth.id', read_only=True)
     booth_name = serializers.CharField(source='booth.admin.name', read_only=True)
-    category = serializers.CharField(source='category', read_only=True)
-
+    booth_is_event = serializers.BooleanField(source='booth.is_event', read_only=True)
     class Meta:
         model = BoothEvent
-        fields = BoardSerializer.Meta.fields +['booth_id', 
-                    'booth_name','title', 'detail', 
-                    'start_time', 'end_time']
+        fields = BoardSerializer.Meta.fields + ['booth_id', 
+                                                'booth_name',
+                                                'booth_is_event',
+                                                'title', 'detail', 
+                                                'start_time', 'end_time']
 
     def create(self, validated_data):
         return BoothEvent.objects.create(**validated_data)
     
 class BoardPolymorphicSerializer(PolymorphicSerializer):
-    model_serializer_mapping = {
+    serializer_mapping = {
         Notice: NoticeSerializer,
         Lost: LostSerializer,
         BoothEvent: BoothEventSerializer,
