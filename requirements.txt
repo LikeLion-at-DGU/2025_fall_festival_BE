@@ -66,3 +66,4 @@ urllib3==2.5.0
 google-cloud-translate==3.21.1
 drf-polymorphic
 whitenoise==6.10.0
+redis
