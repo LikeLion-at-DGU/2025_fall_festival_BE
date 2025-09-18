@@ -215,5 +215,33 @@ class BoothViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=["get"], url_path="anonymous-like-status")
+    def anonymous_like_status(self, request, pk=None):
+        booth = get_object_or_404(Booth, id=pk)
+        
+        # 세션 키가 있는 경우에만 좋아요 상태 확인
+        session_key = request.session.session_key
+        is_liked = False
+        
+        if session_key:
+            client_ip = self._get_client_ip(request)
+            user_identifier = abs(hash(f"{session_key}_{client_ip}"))
+            is_liked = Like.objects.filter(user_id=user_identifier, booth=booth, is_liked=True).exists()
+        
+        # 전체 좋아요 개수
+        likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
+        
+        return Response({
+            "booth_id": booth.id,
+            "likes_count": likes_count,
+            "is_liked": is_liked
+        }, status=status.HTTP_200_OK)
 
-
+    def _get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR', '')
+        return ip
