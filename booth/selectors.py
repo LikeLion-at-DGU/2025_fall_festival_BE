@@ -114,6 +114,11 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
      if is_night is not None:
           qs = qs.filter(is_night=is_night)
 
+     # 좋아요 Top3 처리
+     if top_liked_3:
+          qs = qs.order_by("-like_cnt")[:3]
+          return list(qs)
+
      booths = list(qs)
 
      # 거리 계산
@@ -140,9 +145,6 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
           else:
                booths.sort(key=lambda b: b.name)
 
-     #TODO: 좋아요 count + 현재 사용자 좋아요 여부 annotate 필요
-
-     if top_liked_3:
-          booths = booths[:3]
+     #TODO: 현재 사용자 좋아요 여부 annotate 필요
 
      return booths
