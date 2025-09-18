@@ -80,7 +80,7 @@ class BoothEventSerializer(BoardSerializer):
         return obj.endtime > now
     
 class BoardPolymorphicSerializer(PolymorphicSerializer):
-    model_serializer_mapping = {
+    serializer_mapping = {
         Notice: NoticeSerializer,
         Lost: LostSerializer,
         BoothEvent: BoothEventSerializer,
