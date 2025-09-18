@@ -10,6 +10,7 @@ app_name = "board"
 router = DefaultRouter(trailing_slash=False)
 router.register('notices', NoticeViewSet, basename='notice')
 router.register('losts', LostViewSet, basename='lost')
+router.register('events', BoothEventViewSet, basename='event')
 router.register('', BoardViewSet, basename='board')
 
 urlpatterns = [
