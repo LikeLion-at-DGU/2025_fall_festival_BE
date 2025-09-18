@@ -2,12 +2,12 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 
 from .models import *
 from .serializers import *
 from .services import get_writer_from_uid
+from adminuser.services import resolve_admin_by_uid
 
 
 # 게시물 생성/수정/조회, 관련 게시물
@@ -79,8 +79,8 @@ class BoardViewSet(viewsets.ModelViewSet):
         created_at = instance.created_at
 
         related = (
-            Board.objects.filter(created_at__gt=created_at)
-            .order_by("created_at")[:3]
+            Board.objects.filter(created_at__lt=created_at)
+            .order_by("-created_at")[:3]
         )
 
         serializer = BoardListSerializer(related, many=True)
@@ -104,12 +104,17 @@ class NoticeViewSet(viewsets.ModelViewSet):
     serializer_class = NoticeSerializer
 
     def create(self, request, *args, **kwargs):
-        uid = request.data.get("code")  # request로 들어오는 UID
-        writer_name = get_writer_from_uid(uid)
+        uid = request.data.get("uid")
+        admin = resolve_admin_by_uid(uid)
+        if not admin:  
+            return Response(
+                {"message": "유효하지 않은 UID 입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        board = serializer.save(writer=writer_name)
+        board = serializer.save(writer=admin.name)
 
         return Response(
             {"message": "공지 작성이 완료되었습니다.", 
@@ -118,20 +123,23 @@ class NoticeViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
     
-    
-    
 # Lost 전용 CRUD
 class LostViewSet(viewsets.ModelViewSet):
     queryset = Lost.objects.all().order_by("-created_at")
     serializer_class = LostSerializer
 
     def create(self, request, *args, **kwargs):
-        uid = request.data.get("code")  # request로 들어오는 UID
-        writer_name = get_writer_from_uid(uid)
+        uid = request.data.get("uid")
+        admin = resolve_admin_by_uid(uid)
+        if not admin:  
+            return Response(
+                {"message": "유효하지 않은 UID 입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        board = serializer.save(writer=writer_name)
+        board = serializer.save(writer=admin.name)
 
         return Response(
             {"message": "분실물이 등록되었습니다.", 
