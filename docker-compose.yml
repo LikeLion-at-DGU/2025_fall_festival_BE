@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   web:
-    image: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/2025-fall-festival-be:${GITHUB_SHA}
+    image: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/2025-fall-festival-be:latest
     container_name: django_app
     command: gunicorn project.wsgi:application --bind 0.0.0.0:8000
     ports:
