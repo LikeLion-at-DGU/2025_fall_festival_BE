@@ -48,43 +48,34 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
+            cd ~/2025_fall_festival_BE || mkdir -p ~/2025_fall_festival_BE && cd ~/2025_fall_festival_BE
 
-            # 배포 디렉토리 이동
-            DEPLOY_DIR=~/2025_fall_festival_BE
-            mkdir -p $DEPLOY_DIR
-            cd $DEPLOY_DIR
-
-            # .env 덮어쓰기
+            # .env 업데이트
             cat > .env <<EOF
-IMAGE_TAG=${{ github.sha }}
-AWS_REGION=${{ secrets.AWS_REGION }}
-AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
-ECR_REPOSITORY=${{ secrets.ECR_REPOSITORY }}
-SECRET_KEY=${{ secrets.SECRET_KEY }}
-DEBUG=false
-DOMAIN=${{ secrets.DOMAIN }}
-LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
-RUN_MIGRATIONS=true
-RUN_COLLECTSTATIC=true
-DATABASE_URL=${{ secrets.DATABASE_URL }}
-EOF
+            IMAGE_TAG=${{ github.sha }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+            ECR_REPOSITORY=${{ secrets.ECR_REPOSITORY }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DEBUG=false
+            DOMAIN=${{ secrets.DOMAIN }}
+            LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
+            RUN_MIGRATIONS=true
+            RUN_COLLECTSTATIC=true
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            EOF
 
-            # ECR 로그인
+            # ECR 로그인 & pull
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-            # 최신 이미지 pull
-            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.sha }}
-            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
 
             # Compose 재시작
             docker-compose pull --ignore-pull-failures
             docker-compose up -d --remove-orphans
 
-            # 마이그레이션/collectstatic (컨테이너 존재할 경우만)
-            if docker-compose ps -q web > /dev/null; then
-              docker-compose exec -T web python manage.py migrate --noinput || true
-              docker-compose exec -T web python manage.py collectstatic --noinput || true
-            fi
+            # 마이그레이션/collectstatic
+            docker-compose exec -T web python manage.py migrate --noinput
+            docker-compose exec -T web python manage.py collectstatic --noinput
 
-            # 불필요한 이미지 제거
+            # 이미지 정리 (옵션)
             docker image prune -af || true
