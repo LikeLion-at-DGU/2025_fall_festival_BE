@@ -21,7 +21,10 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # path('admin/', admin.site.urls),
+    path("admin/django/", admin.site.urls), # 장고 기본 관리자 페이지
+    path("admin/", include("adminuser.urls")), # 관리자 로그인/검증/로그아웃 API
+
     path('', include('booth.urls')),
   
     path('board/', include('board.urls')),
