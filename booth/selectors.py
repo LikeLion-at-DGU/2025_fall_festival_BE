@@ -100,7 +100,7 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
           date = timezone.localdate()
 
      qs = Booth.objects.all().select_related("location")
-     qs = qs.filter(operate_date=date)
+     qs = qs.filter(boothschedule__day=date)
 
      # 종류 필터
      if types:
