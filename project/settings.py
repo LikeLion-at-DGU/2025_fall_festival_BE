@@ -214,9 +214,8 @@ CORS_ALLOWED_ORIGINS = [
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1", # Redis 변경
-        #"LOCATION": "unique-admin-cache",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-admin-cache",
     }
 }
 
