@@ -27,9 +27,17 @@ jobs:
 
       - name: Run tests
         run: python manage.py test  # 테스트가 있으면 앱 이름 추가 (e.g., board booth)
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: ${{ secrets.DEBUG }}  # 선택적
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # 선택적
 
       - name: Check makemigrations
         run: python manage.py makemigrations --dry-run --check  # 마이그레이션 필요 여부 확인
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: ${{ secrets.DEBUG }}  # 선택적
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # 선택적
 
   cd:
     needs: ci
@@ -54,14 +62,18 @@ jobs:
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1.0.3  # 최신 버전 사용 권장
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          env:  # 환경 변수 전달
+            SECRET_KEY: ${{ secrets.SECRET_KEY }}
+            DEBUG: ${{ secrets.DEBUG }}  # 선택적
+            DATABASE_URL: ${{ secrets.DATABASE_URL }}  # 선택적
           script: |
             cd ~/2025_fall_festival_BE || exit
-            git pull origin main
+            git pull origin dev
             docker login $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com -u AWS -p $(aws ecr get-login-password --region $AWS_REGION)
             docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
             docker-compose down
