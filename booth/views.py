@@ -68,7 +68,8 @@ class BoothViewSet(viewsets.ModelViewSet):
             user_location= user_location,
             ordering=ordering,
             top_liked_3=top_liked_3,
-            is_night=is_night
+            is_night=is_night,
+            is_event=data.get("is_event")
         )
 
         serializer = BoothListSerializer(booths, many=True, context={"date": date})
