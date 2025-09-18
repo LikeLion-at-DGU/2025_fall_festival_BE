@@ -1,20 +1,29 @@
 from rest_framework import serializers
 from drf_polymorphic.serializers import PolymorphicSerializer
+from django.utils import timezone
+
 from .models import *
 
 class BoardSerializer(serializers.ModelSerializer):
-    writer = serializers.SerializerMethodField()
-
     class Meta:
         model = Board
-        fields = ['id', 'category', 'writer']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'category', 'writer', 'created_at', 'updated_at']
     
-    # 구현 필요! uid와 비교하여 adminuser 이름 넣어주기
     def get_writer(self, obj):
-        if hasattr(obj, "adminuser") and obj.adminuser:
-            return obj.adminuser.name
-        return None
+        request = self.context.get("request")
+        if not request:
+            return None
+
+        # token 가져오기 (POST/PUT -> data, GET -> query_params)
+        token = request.data.get("token") or request.query_params.get("token")
+        if not token:
+            return None
+
+        try:
+            admin = Admin.objects.get(code=token)
+            return admin.name
+        except Admin.DoesNotExist:
+            return None
 
 class NoticeSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
@@ -25,13 +34,6 @@ class LostSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
         model = Lost
         fields = ['id', 'category', 'title', 'content', 'location', 'image', 'writer']
-
-# class BoardPolymorphicSerializer(PolymorphicSerializer):
-
-#     serializer_mapping = {
-#         Notice: NoticeSerializer,
-#         Lost: LostSerializer,
-#     }
 
 class NoticeListSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
@@ -58,17 +60,28 @@ class BoardListSerializer(serializers.Serializer):
         data.pop("polymorphic_ctype", None)
         return data
 
-class BoothEventSerializer(serializers.ModelSerializer):
+class BoothEventSerializer(BoardSerializer):
     booth_id = serializers.IntegerField(source='booth.id', read_only=True)
     booth_name = serializers.CharField(source='booth.admin.name', read_only=True)
     category = serializers.CharField(source='category', read_only=True)
+    is_active = serializers.SerializerMethodField()
 
     class Meta:
         model = BoothEvent
-        fields = ['id', 'category','booth_id', 
+        fields = BoardSerializer.Meta.fields +['booth_id', 
                     'booth_name','title', 'detail', 
-                    'start_time', 'end_time',
-                    'created_at', 'updated_at']
+                    'start_time', 'end_time']
 
     def create(self, validated_data):
         return BoothEvent.objects.create(**validated_data)
+    
+    def get_is_active(self, obj):
+        now = timezone.now()
+        return obj.endtime > now
+    
+class BoardPolymorphicSerializer(PolymorphicSerializer):
+    model_serializer_mapping = {
+        Notice: NoticeSerializer,
+        Lost: LostSerializer,
+        BoothEvent: BoothEventSerializer,
+    }

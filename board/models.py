@@ -1,5 +1,6 @@
 from django.db import models
 from booth.models import Booth
+from adminuser.models import Admin
 
 # Create your models here.
 from polymorphic.models import PolymorphicModel
@@ -15,6 +16,7 @@ class Board(PolymorphicModel):
         choices=Category.choices,
         default=Category.NOTICE
     )
+    writer = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -32,7 +34,7 @@ class Notice(Board):
 
 #분실물
 def image_upload_path(instance, filename):
-  return f'board_images/{instance.pk}/{filename}'
+    return f'board_images/{instance.pk}/{filename}'
 
 class Lost(Board):
     title = models.CharField(max_length=200)
@@ -49,8 +51,8 @@ class BoothEvent(Board):
     title = models.CharField(max_length=50)
     detail = models.TextField()
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE) 
-    start_time = models.DateField()
-    end_time = models.DateField()
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
     
     def save(self, *args, **kwargs):
         self.category = Board.Category.EVENT

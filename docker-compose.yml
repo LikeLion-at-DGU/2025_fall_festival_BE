@@ -2,15 +2,15 @@ version: '3.9'
 
 services:
   web:
-    build: .
+    image: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/2025-fall-festival-be:latest
     container_name: django_app
     command: gunicorn project.wsgi:application --bind 0.0.0.0:8000
-    volumes:
-      - .:/app
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - DATABASE_URL=${DATABASE_URL}
     depends_on:
       - db
       - redis

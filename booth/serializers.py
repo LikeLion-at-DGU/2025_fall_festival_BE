@@ -1,10 +1,75 @@
 from rest_framework import serializers
 from .models import *
 
+from rest_framework import serializers
+from .models import Booth, Location
 
-class BoothSerializer(serializers.ModelSerializer):
-    pass
+class LocationSerializer(serializers.ModelSerializer):
+    lat = serializers.FloatField(source="latitude")
+    lng = serializers.FloatField(source="longitude")
 
+    class Meta:
+        model = Location
+        fields = ["id", "name", "lat", "lng"]
+
+class BoothListSerializer(serializers.ModelSerializer):
+    booth_id = serializers.IntegerField(source="id")
+    location = LocationSerializer()
+    likes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_event = serializers.BooleanField()
+    business_days = serializers.SerializerMethodField()
+    start_time = serializers.SerializerMethodField()
+    end_time = serializers.SerializerMethodField()
+    distance_m = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Booth
+        fields = [
+            "booth_id",
+            "name","category",
+            "image_url",
+            "is_night","is_dorder","is_event",
+            "location", "distance_m",
+            "business_days","start_time","end_time",
+            "likes_count", "is_liked",
+        ]
+
+    def get_business_days(self, obj):
+        return list(
+            obj.boothschedule_set.values_list("day", flat=True).distinct()
+        )
+        
+    def _get_schedule_for_date(self, obj: Booth):
+        date = self.context.get("date", timezone.localdate())
+        return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
+    
+    def get_likes_count(self, obj):
+        # 임시 디폴트값 리턴
+        return 0  
+
+    def get_is_liked(self, obj):
+        # 임시 디폴트값 리턴
+        return False
+
+    def get_start_time(self, obj):
+        first_schedule = obj.boothschedule_set.order_by("start_time").first()
+        return first_schedule.start_time.strftime("%H:%M") if first_schedule else None
+
+    def get_end_time(self, obj):
+        last_schedule = obj.boothschedule_set.order_by("-end_time").first()
+        return last_schedule.end_time.strftime("%H:%M") if last_schedule else None
+
+    def get_distance_m(self, obj: Booth):
+        distance = getattr(obj, "distance_m", None)
+        if distance is None:
+            return None
+        try:
+            return int(round(float(distance)))
+        except (TypeError, ValueError):
+            return None
+
+##################################################################
 class MenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
@@ -38,7 +103,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = BoothSchedule
         fields = ["day", "start_time", "end_time"]
-
+        
 class DayBoothDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True)
     location_description = serializers.CharField(source="location.description", read_only=True)
@@ -59,7 +124,7 @@ class DayBoothDetailSerializer(serializers.ModelSerializer):
             "booth_description",
             "corners",
         ]
-
+        
 class NightBoothDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True)
     location_description = serializers.CharField(source="location.description", read_only=True)
@@ -93,7 +158,7 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
             rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True).data
 
         return rep
-        
+    
 class DrinkDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True) 
     location_description = serializers.CharField(source="location.description", read_only=True) 
@@ -129,7 +194,7 @@ class FoodtruckDetailSerializer(serializers.ModelSerializer):
             "menus",
             "schedules",
         ]
-
+        
 class ToiletDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True) 
     location_description = serializers.CharField(source="location.description", read_only=True) 
@@ -145,58 +210,7 @@ class ToiletDetailSerializer(serializers.ModelSerializer):
         ]
 
 
-class LocationSerializer(serializers.ModelSerializer):
+class DrinkMenuSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Location
-        fields = ["id", "name"]
-
-
-class BoothListSerializer(serializers.ModelSerializer):
-    location = LocationSerializer()
-    likes_count = serializers.SerializerMethodField()
-    is_liked = serializers.SerializerMethodField()
-    is_event = serializers.BooleanField()
-    today_open_time = serializers.SerializerMethodField()
-    today_close_time = serializers.SerializerMethodField()
-    distance_m = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Booth
-        fields = [
-            "id", "name", "category", "image_url", "is_night",
-            "is_dorder",
-            "location",
-            "today_open_time", "today_close_time",
-            "likes_count", "is_liked", 
-            "is_event",
-            "distance_m"
-        ]
-
-    def get_likes_count(self, obj):
-        # 임시 디폴트값 리턴
-        return 0  
-
-    def get_is_liked(self, obj):
-        # 임시 디폴트값 리턴
-        return False
-    
-    def _get_schedule_for_date(self, obj: Booth):
-        date = self.context.get("date", timezone.localdate())
-        return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
-
-    def get_today_open_time(self, obj):
-        schedule = self._get_schedule_for_date(obj)
-        return schedule.start_time.strftime("%H:%M") if schedule else None
-
-    def get_today_close_time(self, obj):
-        schedule = self._get_schedule_for_date(obj)
-        return schedule.end_time.strftime("%H:%M") if schedule else None
-    
-    def get_distance_m(self, obj: Booth):
-        distance = getattr(obj, "distance_m", None)
-        if distance is None:
-            return None
-        try:
-            return int(round(float(distance)))
-        except (TypeError, ValueError):
-            return None
+        model = Menu
+        fields = ["name", "price", "image_url"]
