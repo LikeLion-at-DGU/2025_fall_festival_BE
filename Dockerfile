@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 8000
 
 # 7. 서버 실행 명령
-CMD ["gunicorn", "myproject.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "project.wsgi:application", "--bind", "0.0.0.0:8000"]
