@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.13'  # Dockerfile과 일치
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -28,12 +28,18 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DEBUG: ${{ secrets.DEBUG }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+          TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
       - name: Check makemigrations
         run: python manage.py makemigrations --dry-run --check
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DEBUG: ${{ secrets.DEBUG }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+          TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
 
   cd:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
@@ -54,34 +60,27 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
           docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest .
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd ~/2025_fall_festival_BE || { echo "Directory not found"; exit 1; }
-            git pull origin dev || { echo "Git pull failed"; exit 1; }
-            
-            # AWS 환경변수 설정
-            export AWS_REGION=${{ secrets.AWS_REGION }}
-            export AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
-            export ECR_REPOSITORY=2025-fall-festival-be
-            export IMAGE_TAG=${{ github.sha }}
-            
-            # 환경변수 파일 생성 (.env)
-            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env
-            echo "DEBUG=${{ secrets.DEBUG }}" >> .env
-            echo "DATABASE_URL=postgresql://myuser:mypassword@db:5432/mydb" >> .env
-            echo "GITHUB_SHA=${{ github.sha }}" >> .env
-            
-            # ECR 로그인 및 이미지 풀
-            aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-            docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-            
-            # 컨테이너 재시작
-            docker-compose down || true
-            docker-compose up -d
-            docker system prune -f
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DEBUG: ${{ secrets.DEBUG }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+          TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
+        run: |
+          cd ~/2025_fall_festival_BE || { echo "Directory not found"; exit 1; }
+          # git pull 제거 (이미지 기반 배포)
+          aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker-compose down || true
+          docker-compose up -d
+          docker system prune -f
