@@ -76,7 +76,7 @@ jobs:
           GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
           GOOGLE_CLOUD_LOCATION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
           TRANSLATION_CACHE_TTL_SEC: ${{ secrets.TRANSLATION_CACHE_TTL_SEC }}
-        script: |
+        run: |
           cd ~/2025_fall_festival_BE || { echo "Directory not found"; exit 1; }
           # git pull 제거 (이미지 기반 배포)
           aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
