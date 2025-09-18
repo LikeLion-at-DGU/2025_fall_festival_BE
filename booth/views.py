@@ -68,8 +68,7 @@ class BoothViewSet(viewsets.ModelViewSet):
             user_location= user_location,
             ordering=ordering,
             top_liked_3=top_liked_3,
-            is_night=is_night,
-            is_event=data.get("is_event")
+            is_night=is_night
         )
 
         serializer = BoothListSerializer(booths, many=True, context={"date": date})
@@ -78,56 +77,6 @@ class BoothViewSet(viewsets.ModelViewSet):
             "results": serializer.data
         }, status=status.HTTP_200_OK)
 
-
-    @action(detail=False, methods=["post"], url_path="nearby")
-    def nearby_booths(self, request):
-        """
-        POST /booths/nearby/
-        사용자 좌표 기반으로 가장 가까운 Location을 찾고,
-        해당 Location의 Booth 중 랜덤 3개 반환
-        """
-        data = request.data
-        user_location = data.get("user_location")
-        is_night = data.get("is_night")
-        if not user_location or "x" not in user_location or "y" not in user_location:
-            return Response({"error": "user_location must include x, y"}, status=400)
-
-        user_x = float(user_location["x"])
-        user_y = float(user_location["y"])
-
-        # 1) 가장 가까운 Location 찾기
-        locations = list(Location.objects.all())
-        nearest_location = None
-        min_dist = float("inf")
-
-        for loc in locations:
-            if loc.latitude and loc.longitude:
-                dist = calculate_distance(user_x, user_y, loc.latitude, loc.longitude)
-                if dist < min_dist:
-                    min_dist = dist
-                    nearest_location = loc
-
-        if not nearest_location:
-            return Response({"error": "No valid locations"}, status=404)
-
-        # 2) 해당 location의 booth 조회
-        booths = list(Booth.objects.filter(location=nearest_location))
-
-        if isinstance(is_night, bool):
-            booths = booths.filter(is_night=is_night)
-
-        # 3) 랜덤 3개 선택
-        if len(booths) > 3:
-            booths = random.sample(booths, 3)
-
-        serializer = BoothListSerializer(booths, many=True, context={"date": data.get("date")})
-
-        return Response({
-            "nearest_location": nearest_location.name,
-            "distance_m": int(round(min_dist)),
-            "booths": serializer.data
-        }, status=200)
-    
 
     @action(detail=False, methods=["post"], url_path="nearby")
     def nearby_booths(self, request):
@@ -216,16 +165,11 @@ class BoothViewSet(viewsets.ModelViewSet):
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=["post"], url_path="anonymous-like")
-    def anonymous_like(self, request, pk=None):
-        """
-        POST /booths/{id}/anonymous-like/
-        로그인하지 않은 사용자도 부스에 좋아요를 누를 수 있는 API
-        중복 좋아요 방지를 위해 세션 키 + IP 주소 조합 사용
-        """
+    @action(detail=True, methods=["post"], url_path="likes")
+    def likes(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)
         
-        # 세션 키 생성 (세션이 없으면 생성)
+        # 세션 키 이용, 사용자 식별 -> 프론트랑 맞춰봐야 함.
         session_key = request.session.session_key
         if not session_key:
             request.session.create()
@@ -233,14 +177,12 @@ class BoothViewSet(viewsets.ModelViewSet):
         
         # 클라이언트 IP 주소 가져오기
         client_ip = self._get_client_ip(request)
-        
-        # 세션 키와 IP를 조합하여 고유 식별자 생성 (음수 방지를 위해 abs 사용)
         user_identifier = abs(hash(f"{session_key}_{client_ip}"))
         
         # 기존 좋아요 확인
         try:
             like = Like.objects.get(user_id=user_identifier, booth=booth)
-            # 이미 좋아요가 존재하면 토글 (좋아요 <-> 좋아요 취소)
+
             like.is_liked = not like.is_liked
             like.save()
             
@@ -269,10 +211,6 @@ class BoothViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="anonymous-like-status")
     def anonymous_like_status(self, request, pk=None):
-        """
-        GET /booths/{id}/anonymous-like-status/
-        로그인하지 않은 사용자의 부스 좋아요 상태 및 좋아요 개수 조회
-        """
         booth = get_object_or_404(Booth, id=pk)
         
         # 세션 키가 있는 경우에만 좋아요 상태 확인
@@ -294,7 +232,6 @@ class BoothViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
     def _get_client_ip(self, request):
-        """클라이언트 IP 주소를 가져오는 헬퍼 메서드"""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
             ip = x_forwarded_for.split(',')[0].strip()
