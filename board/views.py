@@ -158,21 +158,26 @@ class BoothEventViewSet(viewsets.ModelViewSet):
     # POST /board/events/
     def create(self, request, *args, **kwargs):
         uid = request.data.get("code")  # 글 작성 시 전달되는 token/UID
-        writer_name = get_writer_from_uid(uid)
+        admin = resolve_admin_by_uid(uid)
+        if not admin:  
+            return Response(
+                {"message": "유효하지 않은 UID 입니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         
-        from adminuser.models import Admin
-        try:
-            admin = Admin.objects.get(code=uid)
-        except Admin.DoesNotExist:
-            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        # from adminuser.models import Admin
+        # try:
+        #     admin = Admin.objects.get(code=uid)
+        # except Admin.DoesNotExist:
+        #     return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. UID로 Admin 조회
-        from adminuser.models import Admin
-        try:
-            admin = Admin.objects.get(code=uid)
-        except Admin.DoesNotExist:
-            return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        # # 1. UID로 Admin 조회
+        # from adminuser.models import Admin
+        # try:
+        #     admin = Admin.objects.get(code=uid)
+        # except Admin.DoesNotExist:
+        #     return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 2. Admin과 연결된 Booth 가져오기
         from booth.models import Booth
@@ -184,7 +189,8 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             booth = None  # Booth가 없으면 그냥 넘어감
         
         booth_event = BoothEvent.objects.create(
-            writer=writer_name,
+            booth=booth,
+            writer=admin.name,
             title=request.data.get('title'),
             detail=request.data.get('detail'),
             start_time=request.data.get('start_time'),
