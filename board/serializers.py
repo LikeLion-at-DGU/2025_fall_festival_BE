@@ -47,9 +47,11 @@ class LostListSerializer(BoardSerializer):
         fields = ['id', 'category', 'title', 'writer']
 
 class BoothEventListSerializer(BoardSerializer):
+    booth_id = serializers.IntegerField(source='booth.id', read_only=True)
+    booth_is_event = serializers.BooleanField(source='booth.is_event', read_only=True)
     class Meta(BoardSerializer.Meta):
         model = BoothEvent
-        fields = ['id', 'category', 'title', 'writer']
+        fields = ['id', 'category', 'title', 'writer', 'booth_id', 'booth_is_event']
 
 class BoardListSerializer(serializers.Serializer):
 
@@ -70,11 +72,14 @@ class BoardListSerializer(serializers.Serializer):
 class BoothEventSerializer(BoardSerializer):
     booth_id = serializers.IntegerField(source='booth.id', read_only=True)
     booth_name = serializers.CharField(source='booth.admin.name', read_only=True)
+    booth_is_event = serializers.BooleanField(source='booth.is_event', read_only=True)
     class Meta:
         model = BoothEvent
-        fields = BoardSerializer.Meta.fields +['booth_id', 
-                    'booth_name','title', 'detail', 
-                    'start_time', 'end_time']
+        fields = BoardSerializer.Meta.fields + ['booth_id', 
+                                                'booth_name',
+                                                'booth_is_event',
+                                                'title', 'detail', 
+                                                'start_time', 'end_time']
 
     def create(self, validated_data):
         return BoothEvent.objects.create(**validated_data)
