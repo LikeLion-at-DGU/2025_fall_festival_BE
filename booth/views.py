@@ -68,7 +68,8 @@ class BoothViewSet(viewsets.ModelViewSet):
             user_location= user_location,
             ordering=ordering,
             top_liked_3=top_liked_3,
-            is_night=is_night
+            is_night=is_night,
+            is_event=data.get("is_event")
         )
 
         serializer = BoothListSerializer(booths, many=True, context={"date": date})
@@ -77,6 +78,56 @@ class BoothViewSet(viewsets.ModelViewSet):
             "results": serializer.data
         }, status=status.HTTP_200_OK)
 
+
+    @action(detail=False, methods=["post"], url_path="nearby")
+    def nearby_booths(self, request):
+        """
+        POST /booths/nearby/
+        사용자 좌표 기반으로 가장 가까운 Location을 찾고,
+        해당 Location의 Booth 중 랜덤 3개 반환
+        """
+        data = request.data
+        user_location = data.get("user_location")
+        is_night = data.get("is_night")
+        if not user_location or "x" not in user_location or "y" not in user_location:
+            return Response({"error": "user_location must include x, y"}, status=400)
+
+        user_x = float(user_location["x"])
+        user_y = float(user_location["y"])
+
+        # 1) 가장 가까운 Location 찾기
+        locations = list(Location.objects.all())
+        nearest_location = None
+        min_dist = float("inf")
+
+        for loc in locations:
+            if loc.latitude and loc.longitude:
+                dist = calculate_distance(user_x, user_y, loc.latitude, loc.longitude)
+                if dist < min_dist:
+                    min_dist = dist
+                    nearest_location = loc
+
+        if not nearest_location:
+            return Response({"error": "No valid locations"}, status=404)
+
+        # 2) 해당 location의 booth 조회
+        booths = list(Booth.objects.filter(location=nearest_location))
+
+        if isinstance(is_night, bool):
+            booths = booths.filter(is_night=is_night)
+
+        # 3) 랜덤 3개 선택
+        if len(booths) > 3:
+            booths = random.sample(booths, 3)
+
+        serializer = BoothListSerializer(booths, many=True, context={"date": data.get("date")})
+
+        return Response({
+            "nearest_location": nearest_location.name,
+            "distance_m": int(round(min_dist)),
+            "booths": serializer.data
+        }, status=200)
+    
 
     @action(detail=False, methods=["post"], url_path="nearby")
     def nearby_booths(self, request):
@@ -164,51 +215,7 @@ class BoothViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=["post"], url_path="likes")
-    def likes(self, request, pk=None):
-        booth = get_object_or_404(Booth, id=pk)
-        
-        # 세션 키 이용, 사용자 식별 -> 프론트랑 맞춰봐야 함.
-        session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-        
-        # 클라이언트 IP 주소 가져오기
-        client_ip = self._get_client_ip(request)
-        user_identifier = abs(hash(f"{session_key}_{client_ip}"))
-        
-        # 기존 좋아요 확인
-        try:
-            like = Like.objects.get(user_id=user_identifier, booth=booth)
-
-            like.is_liked = not like.is_liked
-            like.save()
-            
-            if like.is_liked:
-                message = "부스 좋아요"
-                status_code = status.HTTP_200_OK
-            else:
-                message = "부스 좋아요 취소"
-                status_code = status.HTTP_200_OK
-                
-        except Like.DoesNotExist:
-            # 좋아요가 없으면 새로 생성
-            Like.objects.create(user_id=user_identifier, booth=booth, is_liked=True)
-            message = "부스 좋아요"
-            status_code = status.HTTP_201_CREATED
-        
-        # 현재 좋아요 개수 계산
-        likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
-        
-        return Response({
-            "message": message,
-            "booth_id": booth.id,
-            "likes_count": likes_count,
-            "is_liked": Like.objects.filter(user_id=user_identifier, booth=booth, is_liked=True).exists()
-        }, status=status_code)
-
+    
     @action(detail=True, methods=["get"], url_path="anonymous-like-status")
     def anonymous_like_status(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)
@@ -238,4 +245,3 @@ class BoothViewSet(viewsets.ModelViewSet):
         else:
             ip = request.META.get('REMOTE_ADDR', '')
         return ip
-
