@@ -2,7 +2,7 @@ name: CI/CD to EC2
 
 on:
   push:
-    branches: [ 'dev' ]   # dev 브랜치에 푸시되면 배포(원하시면 변경)
+    branches: [ 'dev' ]  # dev 브랜치에 푸시되면 배포
 
 jobs:
   build-and-push:
@@ -50,7 +50,7 @@ jobs:
             set -e
             cd ~/2025_fall_festival_BE || mkdir -p ~/2025_fall_festival_BE && cd ~/2025_fall_festival_BE
 
-            # .env 업데이트 (필요한 환경변수들)
+            # .env 업데이트
             cat > .env <<EOF
             IMAGE_TAG=${{ github.sha }}
             AWS_REGION=${{ secrets.AWS_REGION }}
@@ -73,9 +73,9 @@ jobs:
             docker-compose pull --ignore-pull-failures
             docker-compose up -d --remove-orphans
 
-            # 마이그레이션/collectstatic (또는 entrypoint 로 처리 가능)
+            # 마이그레이션/collectstatic
             docker-compose exec -T web python manage.py migrate --noinput
             docker-compose exec -T web python manage.py collectstatic --noinput
 
-            # 이미지 정리(옵션)
+            # 이미지 정리 (옵션)
             docker image prune -af || true
