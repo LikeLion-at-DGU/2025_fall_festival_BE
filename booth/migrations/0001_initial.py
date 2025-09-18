@@ -11,6 +11,9 @@ class Migration(migrations.Migration):
     dependencies = [
         ("adminuser", "0001_initial"),
     ]
+    dependencies = [
+        ("adminuser", "0001_initial"),
+    ]
 
     operations = [
         migrations.CreateModel(
@@ -101,6 +104,12 @@ class Migration(migrations.Migration):
                         on_delete=django.db.models.deletion.CASCADE, to="booth.booth"
                     ),
                 ),
+                (
+                    "booth",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE, to="booth.booth"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
@@ -118,6 +127,27 @@ class Migration(migrations.Migration):
                 ("day", models.DateField()),
                 ("start_time", models.TimeField()),
                 ("end_time", models.TimeField()),
+                (
+                    "booth",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="booth.booth"
+                    ),
+                ),
+            ],
+        ),
+        migrations.CreateModel(
+            name="Corner",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=30)),
                 (
                     "booth",
                     models.ForeignKey(

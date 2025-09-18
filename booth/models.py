@@ -2,13 +2,14 @@ from django.db import models
 from django.utils import timezone
 from adminuser.models import Admin
 
-# Create your models here.
+
 class Location(models.Model):
     name = models.CharField(max_length=30)
     latitude = models.FloatField()
     longitude = models.FloatField()
     map_x = models.FloatField()
     map_y = models.FloatField()
+    description = models.CharField(max_length=30, blank=True)
 
 class Booth(models.Model):
     class Category(models.TextChoices):
@@ -18,7 +19,7 @@ class Booth(models.Model):
         STORE = 'Store', '편의점'
         BOOTH = 'Booth', '부스'
     
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE)    
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, blank=True, null=True)    
     name = models.CharField(max_length=30)
     category = models.CharField(
         max_length=10,
@@ -30,10 +31,7 @@ class Booth(models.Model):
     is_event = models.BooleanField(default=False)
     is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
-    operate_date = models.DateField()
-    
-    def is_operating_today(self):
-        return self.operate_date == timezone.localdate()
+    like_cnt = models.IntegerField(default=0)
 
     
 class BoothDetail(models.Model):
@@ -50,7 +48,10 @@ class Menu(models.Model):
     image_url = models.CharField(max_length=200, blank=True, null=True)
     ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
-    
+
+class Corner(models.Model):
+    booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
+    name = models.CharField(max_length=30)
     
 class BoothSchedule(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)

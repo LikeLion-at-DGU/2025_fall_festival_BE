@@ -133,10 +133,15 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         #"common.authentication.CookieJwtAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+
+        # UID 인증이 최상단에서 작동되어야 함.
+        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
+
+        "rest_framework_simplejwt.authentication.JWTAuthentication", # 기존 JWT 유지
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # 기본은 모두 접근 허용, 보호 API만 퍼미션 적용
+        #'rest_framework.permissions.IsAuthenticated', # 기본 보안 유지
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -202,14 +207,47 @@ CORS_ALLOWED_ORIGINS = [
     "https://2025fallfestivaldgu.netlify.app",
 ]
 
-STORAGES = {
+# AWS_STORAGE_BUCKET_NAME = "dummy-bucket"
+
+
+# 캐시 설정 추가 (UID -> admin_id 매핑 저장. 개발은 LocMem, 배포는 Redis)
+
+CACHES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
-        # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-admin-cache",
+    }
 }
 
+# UID 만료 시간 (초) - 1시간
+ADMIN_UID_TTL = 3600
+# STORAGES = {
+#     "default": {
+#         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#     },
+#     "staticfiles": {
+#         # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
+#         # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
+#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#     },
+# }
+
+import os
+
+if os.getenv("USE_S3") == "true":
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        }, 
+    }
+    
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
