@@ -120,8 +120,7 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
 
      # 좋아요 Top3 처리
      if top_liked_3:
-          qs = qs.order_by("-like_cnt")[:3]
-          return list(qs)
+          return qs.order_by("-like_cnt")[:3]
 
      booths = list(qs)
 
