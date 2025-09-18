@@ -3,7 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 # 필요시 로컬 테스트만 열 때:
-from rest_framework.permissions import AllowAny
+# from rest_framework.permissions import AllowAny
 
 from .serializers import TranslationSerializer
 from .models import Translation
@@ -15,7 +15,7 @@ class TranslationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Translation.objects.all().order_by("-updated_at")
     serializer_class = TranslationSerializer
     # 개발용(로컬 스모크 테스트)만 잠깐 열 때:
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
 
     @action(detail=False, methods=["post"], url_path="resolve")
     def resolve(self, request):
