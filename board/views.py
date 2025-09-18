@@ -9,7 +9,7 @@ from .models import *
 from .serializers import *
 from .services import get_writer_from_uid
 
-    
+
 # 게시물 생성/수정/조회, 관련 게시물
 # POST /board/notices 또는 losts
 # PATCH, GET /board/{id}
@@ -59,6 +59,18 @@ class BoardViewSet(viewsets.ModelViewSet):
                 "board_id": board.id,
                 "board_title": board.title,
         })
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        board_id = instance.id
+        instance.delete()
+        return Response(
+            {
+                "message": "게시글이 삭제되었습니다.",
+                "board_id": board_id,
+            },
+            status=status.HTTP_200_OK,
+        )
     
     # GET /board/{id}/related, 관련 게시물 조회
     @action(detail=True, methods=["GET"])
@@ -112,7 +124,6 @@ class NoticeViewSet(viewsets.ModelViewSet):
 class LostViewSet(viewsets.ModelViewSet):
     queryset = Lost.objects.all().order_by("-created_at")
     serializer_class = LostSerializer
-    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         uid = request.data.get("code")  # request로 들어오는 UID
@@ -140,6 +151,7 @@ class BoothEventViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         uid = request.data.get("code")  # 글 작성 시 전달되는 token/UID
         writer_name = get_writer_from_uid(uid)
+
         
         from adminuser.models import Admin
         try:
