@@ -21,3 +21,6 @@ class Admin(models.Model):
         choices=Role.choices,
         default=Role.STAFF,
     )
+    
+    def __str__(self):
+        return f"[{self.id}] {self.name} ({self.get_role_display()}) - {self.code}"

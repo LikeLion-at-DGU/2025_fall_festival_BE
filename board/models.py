@@ -19,6 +19,10 @@ class Board(PolymorphicModel):
     writer = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"[{self.id}] {self.get_category_display()} - writer={self.writer}"
+
 
 
 #공지
@@ -30,6 +34,10 @@ class Notice(Board):
     def save(self, *args, **kwargs):
         self.category = Board.Category.NOTICE
         super().save(*args, **kwargs)
+    
+    def __str__(self):
+        flag = "🚨" if self.is_emergency else ""
+        return f"[공지] {self.title} {flag}"
 
 
 #분실물
@@ -45,6 +53,10 @@ class Lost(Board):
     def save(self, *args, **kwargs):
         self.category = Board.Category.LOSTITEM
         super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"[분실물] {self.title} ({self.location})"
+
 
 #event
 class BoothEvent(Board):
@@ -57,3 +69,6 @@ class BoothEvent(Board):
     def save(self, *args, **kwargs):
         self.category = Board.Category.EVENT
         super().save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"[이벤트] {self.title} @ {self.booth.name} ({self.start_time} ~ {self.end_time})"
