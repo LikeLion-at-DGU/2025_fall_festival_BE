@@ -38,7 +38,10 @@ class Booth(models.Model):
     like_cnt = models.IntegerField(default=0)
     
     def __str__(self):
-        return f"[{self.id}] ({self.name} / {self.admin.name}) - {self.get_category_display()} [event : {self.is_event}]"
+        admin_name = getattr(self.admin, "name", "Unknown Admin")
+        booth_name = getattr(self, "name", "Unnamed Booth")
+        category = self.get_category_display() if hasattr(self, "get_category_display") else "Unknown Category"
+        return f"[{getattr(self, 'id', 'N/A')}] ({booth_name} / {admin_name}) - {category} [event : {self.is_event}]"
 
 
     
