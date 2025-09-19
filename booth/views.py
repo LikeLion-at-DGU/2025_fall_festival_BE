@@ -254,8 +254,10 @@ class BoothViewSet(viewsets.ModelViewSet):
             message = "부스 좋아요"
             status_code = status.HTTP_201_CREATED
 
-        # 현재 좋아요 개수 계산
+        # 현재 좋아요 개수 계산 및 booth.like_cnt 업데이트
         likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
+        booth.like_cnt = likes_count
+        booth.save()
 
         return Response({
             "message": message,
@@ -278,11 +280,11 @@ class BoothViewSet(viewsets.ModelViewSet):
             is_liked = Like.objects.filter(user_id=user_identifier, booth=booth, is_liked=True).exists()
         
         # 전체 좋아요 개수
-        likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
+        like_cnt = Like.objects.filter(booth=booth, is_liked=True).count()
         
         return Response({
             "booth_id": booth.id,
-            "likes_count": likes_count,
+            "likes_count": like_cnt,
             "is_liked": is_liked
         }, status=status.HTTP_200_OK)
 
