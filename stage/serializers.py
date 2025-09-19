@@ -13,6 +13,5 @@ class StageSerializer(serializers.ModelSerializer):
             "image_url", "location_name"
         ]
 
-    def get_is_live_now(self, obj):
-        return obj.is_live_now
-    
+    def get_is_active(self, obj):
+        return obj.is_active
