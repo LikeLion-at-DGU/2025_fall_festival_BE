@@ -5,6 +5,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Stage
 from .serializers import StageSerializer
+from datetime import timedelta
+
 
 class StageViewSet(viewsets.ModelViewSet):
     queryset = Stage.objects.select_related("location").order_by("start_time")
@@ -27,7 +29,16 @@ class StageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path=r"days/(?P<day>[^/.]+)/schedules/(?P<time>[^/.]+)")
     def by_day_time(self, request, day=None, time=None):
         target = timezone.make_aware(datetime.strptime(f"{day} {time}", "%Y-%m-%d %H:%M"))
-        qs = self.queryset.filter(start_time__lte=target, end_time__gt=target)
+        
+        # 해당 시간 ~ 1시간 구간
+        start_of_hour = target
+        end_of_hour = target + timedelta(hours=1)
+
+        # 공연이 이 구간과 겹치면 조회
+        qs = self.queryset.filter(
+            start_time__lt=end_of_hour,
+            end_time__gt=start_of_hour
+        )
 
         return Response({
             "day": day,

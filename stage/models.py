@@ -35,3 +35,4 @@ class Stage(models.Model):
         now = timezone.now()
         return self.start_time <= now < self.end_time
     
+    
