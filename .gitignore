@@ -176,3 +176,5 @@ cython_debug/
 # GCP keys
 secrets/
 *.json
+
+aws
