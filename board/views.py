@@ -17,6 +17,29 @@ class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all().order_by("-created_at")
     serializer_class = BoardPolymorphicSerializer
 
+    def get_queryset(self):
+        user = self.request.user # 로그인 여부 확인
+        uid = self.request.data.get("uid")
+
+        # 1. 로그인 안 한 경우 → 전체 공개
+        if not user.is_authenticated:
+            return Board.objects.all().order_by("-created_at")
+        
+        # 2. 로그인 한 경우 → Admin 매핑 확인
+        if not uid:
+            return Board.objects.none()
+        admin = resolve_admin_by_uid(uid)
+        if not admin:
+            return Board.objects.none()
+
+        # 2-1. 총학생회 → 전체 글
+        if admin.role == "Staff":
+            return Board.objects.all().order_by("-created_at")
+
+        # 2-2. 동아리/학과 → 본인 글만
+        return Board.objects.filter(writer=admin.name).order_by("-created_at")
+
+
     def get_serializer_class(self):
         if self.action == "list":
             # 리스트 조회용
@@ -58,6 +81,7 @@ class BoardViewSet(viewsets.ModelViewSet):
                 "message": message,
                 "board_id": board.id,
                 "board_title": board.title,
+                "board_content": board.content,
         })
     
     def destroy(self, request, *args, **kwargs):
