@@ -23,4 +23,7 @@ class Admin(models.Model):
     )
     
     def __str__(self):
-        return f"[{self.id}] {self.name} ({self.get_role_display()}) - {self.code}"
+        name = getattr(self, "name", None) or "Unknown"
+        role = self.get_role_display() if hasattr(self, "get_role_display") else "Unknown Role"
+        code = getattr(self, "code", "N/A")
+        return f"[{getattr(self, 'id', 'N/A')}] {name} ({role}) - {code}"
