@@ -175,6 +175,12 @@ cython_debug/
 
 # GCP keys
 secrets/
+*.json
+
+aws
+awscliv2.zip
+awscliv2/
+
 secrets/gcp-translation-sa.json
 
 *service_account*.json

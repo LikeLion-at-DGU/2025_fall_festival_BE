@@ -1,4 +1,5 @@
-version: '3.9' 
+version: '3.9'
+
 services:
   traefik:
     image: traefik:latest
@@ -41,6 +42,8 @@ services:
     depends_on:
       - db
       - redis
+    ports:
+      - "8000:8000"  # 임시 테스트용, EC2 IP로 접속 가능
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/healthz || exit 1"]
