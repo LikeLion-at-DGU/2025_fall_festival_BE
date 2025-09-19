@@ -54,15 +54,15 @@ class BoardViewSet(viewsets.ModelViewSet):
                 return BoothEventSerializer
         return BoardPolymorphicSerializer
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        total_count = queryset.count()
-        return Response({
-            "message": "게시글 목록 조회에 성공하였습니다.", 
-            "total_count": total_count,
-            "board": serializer.data
-        })
+# def list(self, request, *args, **kwargs):
+#     queryset = self.get_queryset()
+#     serializer = self.get_serializer(queryset, many=True)
+#     total_count = queryset.count()
+#     return Response({
+#         "message": "게시글 목록 조회에 성공하였습니다.", 
+#         "total_count": total_count,
+#         "board": serializer.data
+#     })
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
