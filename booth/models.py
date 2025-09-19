@@ -37,11 +37,11 @@ class Booth(models.Model):
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
     like_cnt = models.IntegerField(default=0)
     
-    # def __str__(self):
-    #     admin_name = getattr(self.admin, "name", "Unknown Admin")
-    #     booth_name = getattr(self, "name", "Unnamed Booth")
-    #     category = self.get_category_display() if hasattr(self, "get_category_display") else "Unknown Category"
-    #     return f"[{getattr(self, 'id', 'N/A')}] ({booth_name} / {admin_name}) - {category} [event : {self.is_event}]"
+    def __str__(self):
+        admin_name = getattr(self.admin, "name", "Unknown Admin")
+        booth_name = getattr(self, "name", "Unnamed Booth")
+        category = self.get_category_display() if hasattr(self, "get_category_display") else "Unknown Category"
+        return f"[{getattr(self, 'id', 'N/A')}] ({booth_name} / {admin_name}) - {category} [event : {self.is_event}]"
 
 
     
@@ -52,8 +52,8 @@ class BoothDetail(models.Model):
     can_usage = models.BooleanField(default=True)
     description = models.TextField()
     
-    # def __str__(self):
-    #     return f"[{self.booth.name}] {self.usage_table}/{self.all_table} (usable={self.can_usage})"
+    def __str__(self):
+        return f"[{self.booth.name}] {self.usage_table}/{self.all_table} (usable={self.can_usage})"
 
 
 class Menu(models.Model):
@@ -64,16 +64,16 @@ class Menu(models.Model):
     ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
     
-    # def __str__(self):
-    #     return f"[{self.booth.name}] {self.name} - {self.price}원 (sold={self.sold})"
+    def __str__(self):
+        return f"[{self.booth.name}] {self.name} - {self.price}원 (sold={self.sold})"
 
 
 class Corner(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
     
-    # def __str__(self):
-    #     return f"[{self.booth.name}] 코너: {self.name}"
+    def __str__(self):
+        return f"[{self.booth.name}] 코너: {self.name}"
 
     
 class BoothSchedule(models.Model):
@@ -82,8 +82,8 @@ class BoothSchedule(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     
-    # def __str__(self):
-    #     return f"[{self.booth.name}] {self.day} {self.start_time}~{self.end_time}"
+    def __str__(self):
+        return f"[{self.booth.name}] {self.day} {self.start_time}~{self.end_time}"
 
     
 class Like(models.Model):
@@ -91,6 +91,6 @@ class Like(models.Model):
     user_id = models.IntegerField()
     is_liked = models.BooleanField(default=False)
     
-    # def __str__(self):
-    #     status = "❤️" if self.is_liked else "💔"
-    #     return f"[{self.booth.name}] User {self.user_id} {status}"
+    def __str__(self):
+        status = "❤️" if self.is_liked else "💔"
+        return f"[{self.booth.name}] User {self.user_id} {status}"
