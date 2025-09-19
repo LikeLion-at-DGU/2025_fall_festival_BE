@@ -175,4 +175,29 @@ cython_debug/
 
 # GCP keys
 secrets/
-*.json
+secrets/gcp-translation-sa.json
+
+*service_account*.json
+*service-account*.json
+*sa.json
+*cred*.json
+*gcloud*.json
+*apikey*.json
+*api-key*.json
+*oauth*.json
+*firebase*.json
+
+*.secret
+*.secrets
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.ovpn
+*.jks
+*.keystore
+*.kdb
