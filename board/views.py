@@ -181,36 +181,35 @@ class BoothEventViewSet(viewsets.ModelViewSet):
 
     # POST /board/events/
     def create(self, request, *args, **kwargs):
-        uid = request.data.get("code")  # 글 작성 시 전달되는 token/UID
+        uid = request.data.get("uid")  # 글 작성 시 전달되는 token/UID
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID 입니다."},
+                {"message": "유효하지 않은 UID이거나 관리자 정보가 없습니다."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        
-        # from adminuser.models import Admin
-        # try:
-        #     admin = Admin.objects.get(code=uid)
-        # except Admin.DoesNotExist:
-        #     return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # # 1. UID로 Admin 조회
-        # from adminuser.models import Admin
-        # try:
-        #     admin = Admin.objects.get(code=uid)
-        # except Admin.DoesNotExist:
-        #     return Response({"error": "유효하지 않은 UID입니다."}, status=status.HTTP_400_BAD_REQUEST)
-
         # 2. Admin과 연결된 Booth 가져오기
-        from booth.models import Booth
         try:
             booth = Booth.objects.get(admin=admin)
-            booth.is_event = True  # 이벤트 등록됨 표시
-            booth.save()
         except Booth.DoesNotExist:
-            booth = None  # Booth가 없으면 그냥 넘어감
+            return Response(
+                {"message": "해당 관리자에게 연결된 부스가 없습니다."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # 3. 데이터 유효성 검사 및 오류 처리 (Serializer 활용)
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 4. 부스 이벤트 생성
+        booth.is_event = True
+        booth.save()
+
         
         booth_event = BoothEvent.objects.create(
             booth=booth,
