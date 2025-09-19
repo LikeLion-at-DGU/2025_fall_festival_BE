@@ -81,7 +81,7 @@ class BoardViewSet(viewsets.ModelViewSet):
                 "message": message,
                 "board_id": board.id,
                 "board_title": board.title,
-                "board_title": board.content,
+                "board_content": board.content,
         })
     
     def destroy(self, request, *args, **kwargs):
