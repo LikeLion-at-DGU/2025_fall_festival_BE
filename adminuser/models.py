@@ -7,7 +7,8 @@ from django.contrib.auth.models import User
 # Create your models here.
 class Admin(models.Model):
     class Role(models.TextChoices):
-        STAFF = 'Staff', '총학생회'
+        STAFF = 'Staff', '축제기획단' # 라벨만 축제 기획단으로 변경
+        STUCO = 'Stuco', '총학생회' # 총학 Role 추가
         CLUB = 'Club', '동아리'
         MAJOR = 'Major', '학과'
         
