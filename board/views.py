@@ -42,15 +42,15 @@ class BoardViewSet(viewsets.ModelViewSet):
                 return BoothEventSerializer
         return BoardPolymorphicSerializer
 
-# def list(self, request, *args, **kwargs):
-#     queryset = self.get_queryset()
-#     serializer = self.get_serializer(queryset, many=True)
-#     total_count = queryset.count()
-#     return Response({
-#         "message": "게시글 목록 조회에 성공하였습니다.", 
-#         "total_count": total_count,
-#         "board": serializer.data
-#     })
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        total_count = queryset.count()
+        return Response({
+            "message": "게시글 목록 조회에 성공하였습니다.", 
+            "total_count": total_count,
+            "result": serializer.data
+        })
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -167,6 +167,16 @@ class BoothEventViewSet(viewsets.ModelViewSet):
     queryset = BoothEvent.objects.all()
     serializer_class = BoothEventSerializer
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        total_count = queryset.count()
+        return Response({
+            "message": "이벤트 게시글 목록 조회에 성공하였습니다.", 
+            "total_count": total_count,
+            "result": serializer.data
+        })
+    
     # POST /board/events/
     def create(self, request, *args, **kwargs):
         uid = request.data.get("uid")  # 글 작성 시 전달되는 token/UID
