@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.13-slim
 
 # Python 기본 설정
@@ -17,10 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
+# 앱 코드 복사
 COPY . .
 
 EXPOSE 8000
 
-# entrypoint.sh 있으면 실행 (없으면 CMD 바로 실행됨)
+# entrypoint.sh 실행
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gunicorn", "project.wsgi:application", "--workers", "3", "--threads", "2", "--bind", "0.0.0.0:8000"]
