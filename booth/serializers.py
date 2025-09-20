@@ -191,11 +191,12 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        request = self.context.get("request")
         if not instance.is_dorder:
             rep.pop("booth_can_usage", None)
-            rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True).data
+            rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
         else:
-            rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True).data
+            rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
 
         return rep
     
