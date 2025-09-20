@@ -33,9 +33,9 @@ class BoothViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset()
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            serializer = self.get_serializer(page, many=True, context={"request": request})
             return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True, context={"request": request}) 
         return Response({"results": serializer.data})
     
     
@@ -72,7 +72,7 @@ class BoothViewSet(viewsets.ModelViewSet):
             is_event=data.get("is_event")
         )
 
-        serializer = BoothListSerializer(booths, many=True, context={"date": date})
+        serializer = BoothListSerializer(booths, many=True, context={"request": request, "date": date})
 
         return Response({
             "results": serializer.data
@@ -120,57 +120,7 @@ class BoothViewSet(viewsets.ModelViewSet):
         if len(booths) > 3:
             booths = random.sample(booths, 3)
 
-        serializer = BoothListSerializer(booths, many=True, context={"date": data.get("date")})
-
-        return Response({
-            "nearest_location": nearest_location.name,
-            "distance_m": int(round(min_dist)),
-            "booths": serializer.data
-        }, status=200)
-    
-
-    @action(detail=False, methods=["post"], url_path="nearby")
-    def nearby_booths(self, request):
-        """
-        POST /booths/nearby/
-        사용자 좌표 기반으로 가장 가까운 Location을 찾고,
-        해당 Location의 Booth 중 랜덤 3개 반환
-        """
-        data = request.data
-        user_location = data.get("user_location")
-        is_night = data.get("is_night")
-        if not user_location or "x" not in user_location or "y" not in user_location:
-            return Response({"error": "user_location must include x, y"}, status=400)
-
-        user_x = float(user_location["x"])
-        user_y = float(user_location["y"])
-
-        # 1) 가장 가까운 Location 찾기
-        locations = list(Location.objects.all())
-        nearest_location = None
-        min_dist = float("inf")
-
-        for loc in locations:
-            if loc.latitude and loc.longitude:
-                dist = calculate_distance(user_x, user_y, loc.latitude, loc.longitude)
-                if dist < min_dist:
-                    min_dist = dist
-                    nearest_location = loc
-
-        if not nearest_location:
-            return Response({"error": "No valid locations"}, status=404)
-
-        # 2) 해당 location의 booth 조회
-        booths = list(Booth.objects.filter(location=nearest_location))
-
-        if isinstance(is_night, bool):
-            booths = booths.filter(is_night=is_night)
-
-        # 3) 랜덤 3개 선택
-        if len(booths) > 3:
-            booths = random.sample(booths, 3)
-
-        serializer = BoothListSerializer(booths, many=True, context={"date": data.get("date")})
+        serializer = BoothListSerializer(booths, many=True, context={"request": request, "date": data.get("date")})
 
         return Response({
             "nearest_location": nearest_location.name,
@@ -189,29 +139,29 @@ class BoothViewSet(viewsets.ModelViewSet):
         # 화장실 상세
         if booth.category == Booth.Category.TOILET:
             booth = get_toilet_detail(pk)
-            serializer = ToiletDetailSerializer(booth)
+            serializer = ToiletDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 주류 상세
         elif booth.category == Booth.Category.DRINK:
             booth = get_drink_detail(pk)
-            serializer = DrinkDetailSerializer(booth)
+            serializer = DrinkDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 푸드트럭 상세
         elif booth.category == Booth.Category.FOODTRUCK:
             booth = get_foodtruck_detail(pk)
-            serializer = FoodtruckDetailSerializer(booth)
+            serializer = FoodtruckDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 주간부스 상세
         elif booth.category == Booth.Category.BOOTH and not booth.is_night:
-            serializer = DayBoothDetailSerializer(booth)
+            serializer = DayBoothDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 야간부스 상세
         elif booth.category == Booth.Category.BOOTH and booth.is_night:
-            serializer = NightBoothDetailSerializer(booth)
+            serializer = NightBoothDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)

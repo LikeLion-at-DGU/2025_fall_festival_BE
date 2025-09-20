@@ -4,6 +4,12 @@ from django.utils import timezone
 # Create your models here.
 class Stage(models.Model):
     name = models.CharField(max_length=100)
+
+    PERFORMANCE_TYPES = (
+        ("club", "동아리"),
+        ("celebrity", "연예인"),
+    )
+    type = models.CharField(max_length=20, choices=PERFORMANCE_TYPES, default="club")
     # booth 앱의 Location 모델 참조
     location = models.ForeignKey('booth.Location', on_delete =models.CASCADE, related_name='stages')
 
