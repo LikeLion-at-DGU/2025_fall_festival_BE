@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 
 from .models import *
 from .serializers import *
@@ -114,13 +115,15 @@ class BoardViewSet(viewsets.ModelViewSet):
 class NoticeViewSet(viewsets.ModelViewSet):
     queryset = Notice.objects.all().order_by("-created_at")
     serializer_class = NoticeSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         uid = request.data.get("uid")
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID 입니다."},
+                {"message": "만료된 UID 입니다.",
+                 "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -145,7 +148,8 @@ class LostViewSet(viewsets.ModelViewSet):
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID 입니다."},
+                {"message": "만료된 UID 입니다.",
+                 "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -183,7 +187,7 @@ class BoothEventViewSet(viewsets.ModelViewSet):
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID이거나 관리자 정보가 없습니다."},
+                {"message": "만료된 UID 입니다.", "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
