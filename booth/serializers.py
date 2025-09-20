@@ -22,6 +22,7 @@ class BoothListSerializer(serializers.ModelSerializer):
     start_time = serializers.SerializerMethodField()
     end_time = serializers.SerializerMethodField()
     distance_m = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Booth
@@ -34,6 +35,12 @@ class BoothListSerializer(serializers.ModelSerializer):
             "business_days","start_time","end_time",
             "like_cnt", "is_liked",
         ]
+
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
 
     def get_business_days(self, obj):
         schedules = obj.boothschedule_set.order_by("day", "start_time")
@@ -68,13 +75,22 @@ class BoothListSerializer(serializers.ModelSerializer):
 
 ##################################################################
 class MenuSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Menu
         fields = ["name", "price", "image_url"]
 
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
+
 class DorderMenuSerializer(serializers.ModelSerializer):
     is_best = serializers.SerializerMethodField()
     is_soldout = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Menu
@@ -90,6 +106,12 @@ class DorderMenuSerializer(serializers.ModelSerializer):
 
     def get_is_soldout(self, obj):
         return obj.ingredient < 5
+
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
 
 class CornerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -107,6 +129,7 @@ class DayBoothDetailSerializer(serializers.ModelSerializer):
     schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
     corners = CornerSerializer(source="corner_set", many=True, read_only=True)
     booth_description = serializers.CharField(source="boothdetail.description", read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Booth
@@ -122,6 +145,12 @@ class DayBoothDetailSerializer(serializers.ModelSerializer):
             "corners",
         ]
         
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
+
 class NightBoothDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True)
     location_description = serializers.CharField(source="location.description", read_only=True)
@@ -129,6 +158,7 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
     menus = DorderMenuSerializer(source="menu_set", many=True, read_only=True)
     booth_description = serializers.CharField(source="boothdetail.description", read_only=True)
     booth_can_usage = serializers.CharField(source="boothdetail.can_usage", read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Booth
@@ -145,14 +175,21 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
             "booth_can_usage",
             "menus",
         ]
+    
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
+        request = self.context.get("request")
         if not instance.is_dorder:
             rep.pop("booth_can_usage", None)
-            rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True).data
+            rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
         else:
-            rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True).data
+            rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
 
         return rep
     
@@ -161,6 +198,7 @@ class DrinkDetailSerializer(serializers.ModelSerializer):
     location_description = serializers.CharField(source="location.description", read_only=True) 
     menus = MenuSerializer(source="menu_set", many=True, read_only=True)
     schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Booth
@@ -173,12 +211,19 @@ class DrinkDetailSerializer(serializers.ModelSerializer):
             "menus",
             "schedules",
         ]
+
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
 
 class FoodtruckDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True) 
     location_description = serializers.CharField(source="location.description", read_only=True) 
     menus = MenuSerializer(source="menu_set", many=True, read_only=True)
     schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Booth
@@ -191,11 +236,18 @@ class FoodtruckDetailSerializer(serializers.ModelSerializer):
             "menus",
             "schedules",
         ]
+
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
         
 class ToiletDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True) 
     location_description = serializers.CharField(source="location.description", read_only=True) 
-    
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Booth
         fields = [
@@ -206,8 +258,21 @@ class ToiletDetailSerializer(serializers.ModelSerializer):
             "location_description",
         ]
 
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
+
 
 class DrinkMenuSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField() 
     class Meta:
         model = Menu
         fields = ["name", "price", "image_url"]
+
+    def get_image_url(self, obj):
+        if obj.image_url:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.image_url.url)
+        return None
