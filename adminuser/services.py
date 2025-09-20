@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.core.cache import cache
-from .models import Admin
+from .models import Admin, AdminUID
 import secrets
 import string
+
+from django.utils import timezone
+from datetime import timedelta
 
 # UID에 사용할 문자 집합 (A~Z + 숫자 0~9)
 _UID_CHARS = string.ascii_uppercase + string.digits
@@ -26,22 +29,42 @@ def issue_uid_by_code(admin_code: str):
     uid = _generate_uid(8)
 
     # 캐시에 UID->admin.id 매핑을 1시간 동안 저장
-    ttl = getattr(settings, "ADMIN_UID_TTL", 3600)  # 기본 만료시간 = 1시간
+    ttl = getattr(settings, "ADMIN_UID_TTL", 30)  # 기본 만료시간 = 1시간
     cache.set(f"{CACHE_KEY_PREFIX}{uid}", admin.id, ttl)
+
+    # DB에 UID와 만료시간 저장
+    expires_at = timezone.now() + timedelta(seconds=ttl)
+    AdminUID.objects.create(admin=admin, uid=uid, uid_expires_at=expires_at)
+
     return uid, admin # (uid, admin) 튜플 반환
 
 
 def resolve_admin_by_uid(uid: str): # UID로부터 연결된 Admin 객체
+
+    if not uid:
+        return None
+
     #  캐시에서 admin_id 가져옴
     admin_id = cache.get(f"{CACHE_KEY_PREFIX}{uid}")
 
     # admin_id 가 존재하면 Admin 객체, 없으면 None 반환
-    if not admin_id:
-        return None
+    # if not admin_id:
+    #     return None
+
+    if admin_id:
+        try:
+            return Admin.objects.get(id=admin_id)
+        except Admin.DoesNotExist:
+            return None
+    
+    # DB에 UID가 있는지 체크, 만료시간 체크
     try:
-        return Admin.objects.get(id=admin_id)
+        admin_uid = AdminUID.objects.get(uid=uid)
+        if admin_uid.uid_expires_at and admin_uid.uid_expires_at > timezone.now():
+            return admin_uid.admin
     except Admin.DoesNotExist:
         return None
+    return None
 
 
 def invalidate_uid(uid: str):
