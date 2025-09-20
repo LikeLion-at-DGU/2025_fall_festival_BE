@@ -60,7 +60,7 @@ class Menu(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
     name = models.CharField(max_length=30)
     price = models.IntegerField()
-    image_url = models.CharField(max_length=200, blank=True, null=True)
+    image_url = models.ImageField(upload_to="menus/images/", blank=True, null=True)
     ingredient = models.IntegerField()
     sold = models.IntegerField() # 판매량
     
