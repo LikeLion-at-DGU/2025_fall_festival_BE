@@ -62,7 +62,7 @@ def resolve_admin_by_uid(uid: str): # UID로부터 연결된 Admin 객체
         admin_uid = AdminUID.objects.get(uid=uid)
         if admin_uid.uid_expires_at and admin_uid.uid_expires_at > timezone.now():
             return admin_uid.admin
-    except Admin.DoesNotExist:
+    except AdminUID.DoesNotExist:
         return None
     return None
 
