@@ -220,22 +220,18 @@ class BoothViewSet(viewsets.ModelViewSet):
     def likes(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)
 
-        # 세션 키 생성 (세션이 없으면 생성)
-        # 세션 키 이용, 사용자 식별 -> 프론트랑 맞춰봐야 함.
-        session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-
-        # 클라이언트 IP 주소 가져오기
-        client_ip = self._get_client_ip(request)
+        # 프론트에서 보낸 user_id 확인 (첫 요청 시 null일 수 있음)
+        user_id = request.data.get("user_id")
         
-        # 세션 키와 IP를 조합하여 고유 식별자 생성 (음수 방지를 위해 abs 사용)
-        user_identifier = abs(hash(f"{session_key}_{client_ip}"))
+        # user_id가 없으면 새로운 세션 키 생성
+        if not user_id:
+            if not request.session.session_key:
+                request.session.create()
+            user_id = request.session.session_key
 
         # 기존 좋아요 확인
         try:
-            like = Like.objects.get(user_id=user_identifier, booth=booth)
+            like = Like.objects.get(user_id=user_id, booth=booth)
             # 이미 좋아요가 존재하면 토글 (좋아요 <-> 좋아요 취소)
 
             like.is_liked = not like.is_liked
@@ -250,7 +246,7 @@ class BoothViewSet(viewsets.ModelViewSet):
 
         except Like.DoesNotExist:
             # 좋아요가 없으면 새로 생성
-            Like.objects.create(user_id=user_identifier, booth=booth, is_liked=True)
+            Like.objects.create(user_id=user_id, booth=booth, is_liked=True)
             message = "부스 좋아요"
             status_code = status.HTTP_201_CREATED
 
@@ -263,35 +259,14 @@ class BoothViewSet(viewsets.ModelViewSet):
             "message": message,
             "booth_id": booth.id,
             "likes_count": likes_count,
-            "is_liked": Like.objects.filter(user_id=user_identifier, booth=booth, is_liked=True).exists()
+            "is_liked": Like.objects.filter(user_id=user_id, booth=booth, is_liked=True).exists(),
+            "user_id": user_id
         }, status=status_code)
 
-    @action(detail=True, methods=["get"], url_path="anonymous-like-status")
-    def anonymous_like_status(self, request, pk=None):
-        booth = get_object_or_404(Booth, id=pk)
-        
-        # 세션 키가 있는 경우에만 좋아요 상태 확인
-        session_key = request.session.session_key
-        is_liked = False
-        
-        if session_key:
-            client_ip = self._get_client_ip(request)
-            user_identifier = abs(hash(f"{session_key}_{client_ip}"))
-            is_liked = Like.objects.filter(user_id=user_identifier, booth=booth, is_liked=True).exists()
-        
-        # 전체 좋아요 개수
-        like_cnt = Like.objects.filter(booth=booth, is_liked=True).count()
-        
-        return Response({
-            "booth_id": booth.id,
-            "likes_count": like_cnt,
-            "is_liked": is_liked
-        }, status=status.HTTP_200_OK)
-
-    def _get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
-        else:
-            ip = request.META.get('REMOTE_ADDR', '')
-        return ip
+    # def _get_client_ip(self, request):
+    #     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    #     if x_forwarded_for:
+    #         ip = x_forwarded_for.split(',')[0].strip()
+    #     else:
+    #         ip = request.META.get('REMOTE_ADDR', '')
+    #     return ip
