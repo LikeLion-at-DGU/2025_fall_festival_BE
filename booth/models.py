@@ -31,7 +31,7 @@ class Booth(models.Model):
         default=Category.BOOTH,
     )
     is_night = models.BooleanField(default=False)
-    image_url = models.CharField(max_length=200, blank=True, null=True)
+    image_url = models.ImageField(upload_to="booths/images/", blank=True, null=True)
     is_event = models.BooleanField(default=False)
     is_dorder = models.BooleanField(default=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
