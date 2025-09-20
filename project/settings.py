@@ -213,12 +213,26 @@ CORS_ALLOWED_ORIGINS = [
 
 # 캐시 설정 추가 (UID -> admin_id 매핑 저장. 개발은 LocMem, 배포는 Redis)
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-admin-cache",
+USE_REDIS = os.getenv("USE_REDIS", "false").lower() == "true"
+
+if USE_REDIS:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-admin-cache",
+        }
+    }
+
 
 # UID 만료 시간 (초) - 1시간
 ADMIN_UID_TTL = 3600
