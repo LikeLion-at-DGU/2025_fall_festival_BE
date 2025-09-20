@@ -13,7 +13,7 @@ class gameViewset(viewsets.ModelViewSet):
     queryset = Game.objects.all()
     serializer_class = GameSerializer
     
-    @action(detail=True, methods=['post'], url_name='start', url_path='start')
+    @action(detail=False, methods=['post'], url_name='start', url_path='start')
     def start(self, request, pk=None):
         user_id = request.data.get("user_id")
         
