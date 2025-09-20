@@ -43,15 +43,8 @@ class BoothListSerializer(serializers.ModelSerializer):
         return None
 
     def get_business_days(self, obj):
-        days = obj.boothschedule_set.values_list("day", flat=True).distinct()
-        weekday_map = ["월", "화", "수", "목", "금", "토", "일"]
-        return [
-            {
-                "date": str(day),
-                "weekday": weekday_map[day.weekday()]
-            }
-            for day in days
-        ]
+        schedules = obj.boothschedule_set.order_by("day", "start_time")
+        return ScheduleSerializer(schedules, many=True).data
         
     def _get_schedule_for_date(self, obj: Booth):
         date = self.context.get("date", timezone.localdate())
