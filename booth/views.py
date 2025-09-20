@@ -33,9 +33,9 @@ class BoothViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset()
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            serializer = self.get_serializer(page, many=True, context={"request": request})
             return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True, context={"request": request}) 
         return Response({"results": serializer.data})
     
     
@@ -72,7 +72,7 @@ class BoothViewSet(viewsets.ModelViewSet):
             is_event=data.get("is_event")
         )
 
-        serializer = BoothListSerializer(booths, many=True, context={"date": date})
+        serializer = BoothListSerializer(booths, many=True, context={"request": request, "date": date})
 
         return Response({
             "results": serializer.data
@@ -120,7 +120,7 @@ class BoothViewSet(viewsets.ModelViewSet):
         if len(booths) > 3:
             booths = random.sample(booths, 3)
 
-        serializer = BoothListSerializer(booths, many=True, context={"date": data.get("date")})
+        serializer = BoothListSerializer(booths, many=True, context={"request": request, "date": data.get("date")})
 
         return Response({
             "nearest_location": nearest_location.name,
@@ -189,29 +189,29 @@ class BoothViewSet(viewsets.ModelViewSet):
         # 화장실 상세
         if booth.category == Booth.Category.TOILET:
             booth = get_toilet_detail(pk)
-            serializer = ToiletDetailSerializer(booth)
+            serializer = ToiletDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 주류 상세
         elif booth.category == Booth.Category.DRINK:
             booth = get_drink_detail(pk)
-            serializer = DrinkDetailSerializer(booth)
+            serializer = DrinkDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 푸드트럭 상세
         elif booth.category == Booth.Category.FOODTRUCK:
             booth = get_foodtruck_detail(pk)
-            serializer = FoodtruckDetailSerializer(booth)
+            serializer = FoodtruckDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 주간부스 상세
         elif booth.category == Booth.Category.BOOTH and not booth.is_night:
-            serializer = DayBoothDetailSerializer(booth)
+            serializer = DayBoothDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # 야간부스 상세
         elif booth.category == Booth.Category.BOOTH and booth.is_night:
-            serializer = NightBoothDetailSerializer(booth)
+            serializer = NightBoothDetailSerializer(booth, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
