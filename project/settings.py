@@ -132,6 +132,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        # UID 인증이 최상단에서 작동되어야 함.
+        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
         #"common.authentication.CookieJwtAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
