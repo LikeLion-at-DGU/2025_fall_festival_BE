@@ -114,11 +114,8 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
      if is_event is not None:
           qs = qs.filter(is_event=is_event)
 
-     if date:
-          qs = qs.filter(
-               Q(category=Booth.Category.BOOTH, boothschedule__day=date) |
-               ~Q(category=Booth.Category.BOOTH)
-          )
+     if date and types and (Booth.Category.BOOTH in types):
+          qs = qs.filter(category=Booth.Category.BOOTH, boothschedule__day=date)
 
      # 좋아요 Top3 처리 (0개 제외)
      if top_liked_3:
