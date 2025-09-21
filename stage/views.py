@@ -42,30 +42,37 @@ class StageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path=r"days/(?P<day>[^/.]+)/schedules/(?P<time>[^/.]+)")
     def by_day_time(self, request, day=None, time=None):
         target = timezone.make_aware(datetime.strptime(f"{day} {time}", "%Y-%m-%d %H:%M"))
-        
+
         # 해당 시간 ~ 1시간 구간
         start_of_hour = target
         end_of_hour = target + timedelta(hours=1)
 
-        # 공연이 이 구간과 겹치면 조회
-        qs = self.queryset.filter(
+        # 현재 시간대 공연
+        current_slot_club = self.queryset.filter(
             type="club",
             start_time__lt=end_of_hour,
             end_time__gt=start_of_hour
         )
 
+        # 이후 남은 공연
+        remaining_club = self.queryset.filter(
+            type="club",
+            start_time__date=target.date(),
+            start_time__gte=end_of_hour
+        )
+
+        # 연예인 공연 (그날 전체)
+        celebrity_qs = self.queryset.filter(
+            type="celebrity",
+            start_time__date=target.date()
+        )
+
         return Response({
             "day": day,
             "time": time,
-            "schedules": self.get_serializer(qs, many=True).data
-        })
-    
-    #연예인 공연전용
-    @action(detail=False, methods=["get"], url_path=r"days/(?P<day>[^/.]+)/celebrity")
-    def celebrity_list(self, request, day=None):
-        d = datetime.strptime(day, "%Y-%m-%d").date()
-        qs = self.queryset.filter(type="celebrity", start_time__date=d)
-        return Response({
-            "day": day,
-            "schedules": self.get_serializer(qs, many=True).data
+            "club": {
+                "current_slot": self.get_serializer(current_slot_club, many=True).data,
+                "remaining": self.get_serializer(remaining_club, many=True).data,
+            },
+            "celebrity": self.get_serializer(celebrity_qs, many=True).data,
         })

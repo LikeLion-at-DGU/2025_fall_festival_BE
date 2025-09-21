@@ -15,6 +15,7 @@ from adminuser.services import resolve_admin_by_uid
 # POST /board/notices 또는 losts
 # PATCH, GET /board/{id}
 class BoardViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
     queryset = Board.objects.all().order_by("-created_at")
     serializer_class = BoardPolymorphicSerializer
 
@@ -25,7 +26,14 @@ class BoardViewSet(viewsets.ModelViewSet):
             return Board.objects.all().order_by("-created_at")
 
         # 본인 글만 보이도록
-        return Board.objects.filter(writer=admin.name).order_by("-created_at")
+        qs = Board.objects.filter(writer=admin.name)
+
+        # Staff, Stuco는 긴급공지 제외
+        if admin.role in ["Staff", "Stuco"]:
+            notice_ids = Notice.objects.filter(is_emergency=True).values_list("id", flat=True)
+            qs = qs.exclude(id__in=notice_ids)
+
+        return qs.order_by("-created_at")
 
 
 
@@ -142,6 +150,7 @@ class NoticeViewSet(viewsets.ModelViewSet):
 class LostViewSet(viewsets.ModelViewSet):
     queryset = Lost.objects.all().order_by("-created_at")
     serializer_class = LostSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         uid = request.data.get("uid")
