@@ -173,11 +173,14 @@ class BoothViewSet(viewsets.ModelViewSet):
         # 프론트에서 보낸 user_id 확인 (첫 요청 시 null일 수 있음)
         user_id = request.data.get("user_id")
         
-        # user_id가 없으면 새로운 세션 키 생성
-        if not user_id:
+        # user_id가 없거나 빈 문자열이면 새로운 세션 키 생성
+        if not user_id or user_id == "null" or user_id == "undefined":
             if not request.session.session_key:
                 request.session.create()
             user_id = request.session.session_key
+            print(f"새로운 user_id 생성: {user_id}")  # 디버깅용
+        else:
+            print(f"기존 user_id 사용: {user_id}")  # 디버깅용
 
         # 기존 좋아요 확인
         try:

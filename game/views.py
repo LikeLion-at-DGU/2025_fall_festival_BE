@@ -17,27 +17,38 @@ class gameViewset(viewsets.ModelViewSet):
     def start(self, request, pk=None):
         user_id = request.data.get("user_id")
         
-        # user_id가 없으면 새로운 세션 키 생성
+        # user_id 없으면 새로 발급
         if not user_id:
             if not request.session.session_key:
                 request.session.create()
             user_id = request.session.session_key
+            is_new_user = True
+        else:
+            is_new_user = False
 
-        # 기존 좋아요 확인
-        try:
-            try_times = request.data.get("try_times", 0)
-            if try_times >= 3:
+        # 기존 게임 조회
+        game = Game.objects.filter(user_id=user_id).first()
+        
+        # 게임 기록이 이미 있으면
+        if game:
+            if game.try_times >= 3:
                 return Response({"message": "시도 횟수를 초과했습니다."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            else:
-                game = Game.objects.create(user_id=user_id, is_started=True, try_times=try_times+1)
-                serializer = self.get_serializer(game)
-                return Response({
-                    "message": "게임이 시작되었습니다.",
-                    "data": {
-                        "try_times": try_times + 1
-                    }
-                }, status=status.HTTP_200_OK)
+            game.try_times += 1
+            game.is_started = True
+            game.save()
+        else:
+            # 최초 게임 생성
+            game = Game.objects.create(user_id=user_id, try_times=1, is_started=True)
+
+        serializer = self.get_serializer(game)
+        return Response({
+            "message": "게임이 시작되었습니다.",
+            "data": {
+                "user_id": user_id,         # 프론트에 저장용
+                "try_times": game.try_times
+            }
+        }, status=status.HTTP_200_OK)
+
 
     @action(detail=True, methods=['post'], url_name='end', url_path='end')
     def end(self, request, pk=None):
@@ -49,7 +60,7 @@ class gameViewset(viewsets.ModelViewSet):
         game.save()
         return Response({"message": "게임이 종료되었습니다."}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'], url_name='success', url_path='success')
+    @action(detail=False, methods=['post'], url_name='success', url_path='success')
     def success(self, request, pk=None):
         game = self.get_object()
         if game.is_success:
