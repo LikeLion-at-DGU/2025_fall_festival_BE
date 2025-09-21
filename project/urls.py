@@ -30,7 +30,7 @@ urlpatterns = [
     path('', include('booth.urls')),
 
     path('board/', include('board.urls')),
-    #path('game/', include('game.urls')),
+    path('game/', include('game.urls')),
     #path('dorder/', include('dorder.urls')),
     path('stage/', include('stage.urls')),
     
