@@ -31,8 +31,8 @@ def issue_uid_by_code(admin_code: str):
     # 유효하면 UID를 새로 생성
     uid = _generate_uid(8)
 
-    # 캐시에 UID->admin.id 매핑을 1시간 동안 저장
-    ttl = getattr(settings, "ADMIN_UID_TTL", 3600)  # 기본 만료시간 = 1시간
+    # 캐시에 UID->admin.id 매핑을 30초.. 동안 저장
+    ttl = getattr(settings, "ADMIN_UID_TTL", 30)  # 기본 만료시간 = 1시간
     cache.set(f"{CACHE_KEY_PREFIX}{uid}", admin.id, ttl)
 
     # DB에 UID와 만료시간 저장
@@ -47,18 +47,18 @@ def resolve_admin_by_uid(uid: str): # UID로부터 연결된 Admin 객체
     if not uid:
         return None
 
-    #  캐시에서 admin_id 가져옴
-    admin_id = cache.get(f"{CACHE_KEY_PREFIX}{uid}")
+    # #  캐시에서 admin_id 가져옴
+    # admin_id = cache.get(f"{CACHE_KEY_PREFIX}{uid}")
 
-    # admin_id 가 존재하면 Admin 객체, 없으면 None 반환
-    # if not admin_id:
-    #     return None
+    # # admin_id 가 존재하면 Admin 객체, 없으면 None 반환
+    # # if not admin_id:
+    # #     return None
 
-    if admin_id:
-        try:
-            return Admin.objects.get(id=admin_id)
-        except Admin.DoesNotExist:
-            return None
+    # if admin_id:
+    #     try:
+    #         return Admin.objects.get(id=admin_id)
+    #     except Admin.DoesNotExist:
+    #         return None
     
     # DB에 UID가 있는지 체크, 만료시간 체크
     try:
