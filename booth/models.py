@@ -88,7 +88,7 @@ class BoothSchedule(models.Model):
     
 class Like(models.Model):
     booth = models.ForeignKey(Booth, on_delete=models.CASCADE)
-    user_id = models.IntegerField()
+    user_id = models.CharField(max_length=50)
     is_liked = models.BooleanField(default=False)
     
     def __str__(self):

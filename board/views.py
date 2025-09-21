@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 
 from .models import *
 from .serializers import *
@@ -14,6 +15,7 @@ from adminuser.services import resolve_admin_by_uid
 # POST /board/notices 또는 losts
 # PATCH, GET /board/{id}
 class BoardViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
     queryset = Board.objects.all().order_by("-created_at")
     serializer_class = BoardPolymorphicSerializer
 
@@ -24,7 +26,14 @@ class BoardViewSet(viewsets.ModelViewSet):
             return Board.objects.all().order_by("-created_at")
 
         # 본인 글만 보이도록
-        return Board.objects.filter(writer=admin.name).order_by("-created_at")
+        qs = Board.objects.filter(writer=admin.name)
+
+        # Staff, Stuco는 긴급공지 제외
+        if admin.role in ["Staff", "Stuco"]:
+            notice_ids = Notice.objects.filter(is_emergency=True).values_list("id", flat=True)
+            qs = qs.exclude(id__in=notice_ids)
+
+        return qs.order_by("-created_at")
 
 
 
@@ -114,13 +123,15 @@ class BoardViewSet(viewsets.ModelViewSet):
 class NoticeViewSet(viewsets.ModelViewSet):
     queryset = Notice.objects.all().order_by("-created_at")
     serializer_class = NoticeSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         uid = request.data.get("uid")
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID 입니다."},
+                {"message": "만료된 UID 입니다.",
+                 "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -139,13 +150,15 @@ class NoticeViewSet(viewsets.ModelViewSet):
 class LostViewSet(viewsets.ModelViewSet):
     queryset = Lost.objects.all().order_by("-created_at")
     serializer_class = LostSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         uid = request.data.get("uid")
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID 입니다."},
+                {"message": "만료된 UID 입니다.",
+                 "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -183,7 +196,7 @@ class BoothEventViewSet(viewsets.ModelViewSet):
         admin = resolve_admin_by_uid(uid)
         if not admin:  
             return Response(
-                {"message": "유효하지 않은 UID이거나 관리자 정보가 없습니다."},
+                {"message": "만료된 UID 입니다.", "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

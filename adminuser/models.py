@@ -27,3 +27,12 @@ class Admin(models.Model):
         role = self.get_role_display() if hasattr(self, "get_role_display") else "Unknown Role"
         code = getattr(self, "code", "N/A")
         return f"[{getattr(self, 'id', 'N/A')}] {name} ({role}) - {code}"
+    
+class AdminUID(models.Model):
+    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, related_name="uids")
+    uid = models.CharField(max_length=20, unique=True)
+    uid_expires_at = models.DateTimeField()
+    
+    def __str__(self):
+        return f"{self.uid} (Admin ID: {self.admin.id})"
+
