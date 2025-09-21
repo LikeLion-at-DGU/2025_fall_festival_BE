@@ -150,6 +150,7 @@ class NoticeViewSet(viewsets.ModelViewSet):
 class LostViewSet(viewsets.ModelViewSet):
     queryset = Lost.objects.all().order_by("-created_at")
     serializer_class = LostSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         uid = request.data.get("uid")
