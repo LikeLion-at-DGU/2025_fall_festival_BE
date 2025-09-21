@@ -32,4 +32,7 @@ class AdminUID(models.Model):
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE, related_name="uids")
     uid = models.CharField(max_length=20, unique=True)
     uid_expires_at = models.DateTimeField()
+    
+    def __str__(self):
+        return f"{self.uid} (Admin ID: {self.admin.id})"
 
