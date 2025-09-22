@@ -38,7 +38,7 @@ class LostSerializer(BoardSerializer):
 class NoticeListSerializer(BoardSerializer):
     class Meta(BoardSerializer.Meta):
         model = Notice
-        fields = ['id', 'category', 'title', 'writer']
+        fields = ['id', 'category', 'title', 'writer', 'is_emergency']
 
 
 class LostListSerializer(BoardSerializer):
