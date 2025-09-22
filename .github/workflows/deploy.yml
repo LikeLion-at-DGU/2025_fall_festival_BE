@@ -2,7 +2,7 @@ name: Django CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 jobs:
   deploy:
