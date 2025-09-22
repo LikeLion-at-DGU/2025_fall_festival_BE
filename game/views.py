@@ -62,16 +62,28 @@ class gameViewset(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_name='success', url_path='success')
     def success(self, request, pk=None):
-        game = self.get_object()
-        if game.is_success:
-            return Response({"message": "이미 성공한 게임입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        user_id = request.data.get("user_id")
+        
+        if not user_id:
+            return Response({"message": "user_id가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # user_id로 가장 최근 게임 찾기
+        game = Game.objects.filter(user_id=user_id).order_by('-id').first()
+        
+        if not game:
+            return Response({"message": "게임을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 게임이 이미 종료되었는지 확인
+        if game.is_end:
+            return Response({"message": "이미 종료된 게임입니다."}, status=status.HTTP_400_BAD_REQUEST)
         
         # 성공 시 일정 확률로 쿠폰 당첨
         success_chance = 0.5
         boothlist = ["멋쟁이사자처럼", "프론티어", "공대"]
         
         if random.random() < success_chance:
-            game.is_success = True
+            # 게임 종료 처리
+            game.is_end = True
             game.save()
             return Response({
                 "message": "쿠폰 당첨",

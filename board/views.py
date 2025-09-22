@@ -7,7 +7,6 @@ from rest_framework.permissions import AllowAny
 
 from .models import *
 from .serializers import *
-from .services import get_writer_from_uid
 from adminuser.services import resolve_admin_by_uid
 
 
@@ -21,17 +20,19 @@ class BoardViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         admin = getattr(self.request, "user_admin", None)
+    
+        # 긴급공지인 Notice가 참조하는 Board PK들
+        emergency_board_ids = Notice.objects.filter(
+            is_emergency=True
+        ).values_list("board_ptr_id", flat=True)
 
-        if not admin:
-            return Board.objects.all().order_by("-created_at")
+        print("긴급공지 PK들:", list(emergency_board_ids))
 
-        # 본인 글만 보이도록
-        qs = Board.objects.filter(writer=admin.name)
 
-        # Staff, Stuco는 긴급공지 제외
-        if admin.role in ["Staff", "Stuco"]:
-            notice_ids = Notice.objects.filter(is_emergency=True).values_list("id", flat=True)
-            qs = qs.exclude(id__in=notice_ids)
+        qs = Board.objects.exclude(id__in=emergency_board_ids)
+
+        if admin:
+            qs = qs.filter(writer=admin.name)
 
         return qs.order_by("-created_at")
 
@@ -131,7 +132,7 @@ class NoticeViewSet(viewsets.ModelViewSet):
         if not admin:  
             return Response(
                 {"message": "만료된 UID 입니다.",
-                 "uid_valid": False},
+                "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -158,7 +159,7 @@ class LostViewSet(viewsets.ModelViewSet):
         if not admin:  
             return Response(
                 {"message": "만료된 UID 입니다.",
-                 "uid_valid": False},
+                    "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -218,10 +219,6 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             )
 
         # 4. 부스 이벤트 생성
-        booth.is_event = True
-        booth.save()
-
-        
         booth_event = BoothEvent.objects.create(
             booth=booth,
             writer=admin.name,
@@ -230,9 +227,18 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             start_time=request.data.get('start_time'),
             end_time=request.data.get('end_time')
         )
+        
+        # 5. 현재 시간이 start_time~end_time 안에 있는지 검사
+        now = timezone.now()
+        if booth_event.start_time <= now < booth_event.end_time:
+            booth.is_event = True
+        else:
+            booth.is_event = False
+        booth.save()
 
         serializer = self.get_serializer(booth_event)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
     
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

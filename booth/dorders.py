@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 
 # 부스 데이터 동기화
 class BoothDataSynchronizer:    
-    def check_event(self):
-        # 이벤트 글을 확인해 현재 이벤트 진행 시간인 부스 is_event True로 변경
-        # 반대의 경우 false로 변경
+    # def check_event(self):
+    #     # 이벤트 글을 확인해 현재 이벤트 진행 시간인 부스 is_event True로 변경
+    #     # 반대의 경우 false로 변경
         
-        now = timezone.now()
-        events = BoothEvent.objects.filter(start_date__lte=now, end_date__gte=now)
-        event_booth_ids = events.values_list('booth_id', flat=True).distinct()
+    #     now = timezone.now()
+    #     events = BoothEvent.objects.filter(start_time__lte=now, end_time__gte=now)
+    #     event_booth_ids = events.values_list('booth_id', flat=True).distinct()
 
-        Booth.objects.filter(id__in=event_booth_ids).update(is_event=True)
-        Booth.objects.exclude(id__in=event_booth_ids).update(is_event=False)
+    #     Booth.objects.filter(id__in=event_booth_ids).update(is_event=True)
+    #     Booth.objects.exclude(id__in=event_booth_ids).update(is_event=False)
     
     def __init__(self, api_url: str = None, api_headers: Dict = None): # 초기화
         self.api_url = api_url or "https://api.test-d-order.store/api/v2/public/d-order/booths/"
@@ -44,7 +44,7 @@ class BoothDataSynchronizer:
         try:
             logger.info("부스 데이터 API 호출 시작")
             
-            check_event = self.check_event()
+            #check_event = self.check_event()
             
             response = requests.get(
                 self.api_url,

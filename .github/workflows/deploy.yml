@@ -11,17 +11,13 @@ jobs:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
+          host: ${{ secrets.EC2_HOST }}        # 예: 3.36.xxx.xxx
+          username: ${{ secrets.EC2_USERNAME }} # 보통 ubuntu
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
           script: |
-            # 1. 프로젝트 폴더로 이동
-            cd ~/project
-
-            # 2. 최신 코드 가져오기
-            git pull origin main
-
-            # 3. 도커 컨테이너 빌드 & 실행
+            cd /home/ubuntu/2025_fall_festival_BE
+            git pull origin dev
             docker compose down
             docker compose build
             docker compose up -d
