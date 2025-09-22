@@ -261,16 +261,16 @@ from django.http import JsonResponse
 #         test_task.delay(2, 5)
 #         return Response("Celery Task Running")
     
-class Test(APIView):
-    def get(self, request):
-        task = test_task.delay(2, 5) # 수정
-        return Response({"message":"Celery Task Running","task_id": task.id}, status=202)
+# class Test(APIView):
+#     def get(self, request):
+#         task = test_task.delay(2, 5) # 수정
+#         return Response({"message":"Celery Task Running","task_id": task.id}, status=202)
    
    
-def get_task_status(request, task_id: str):
-    task_result = AsyncResult(task_id)
-    return JsonResponse({
-        "task_id": task_id,
-        "task_status": task_result.status,
-        "task_result": task_result.result,
-    })
+# def get_task_status(request, task_id: str):
+#     task_result = AsyncResult(task_id)
+#     return JsonResponse({
+#         "task_id": task_id,
+#         "task_status": task_result.status,
+#         "task_result": task_result.result,
+#     })
