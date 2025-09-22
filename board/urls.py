@@ -14,5 +14,7 @@ router.register('events', BoothEventViewSet, basename='event')
 router.register('', BoardViewSet, basename='board')
 
 urlpatterns = [
+    # path('test/', Test.as_view()),
+    # path('tasks/<task_id>', get_task_status, name='get_task_status'),
     path('', include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
