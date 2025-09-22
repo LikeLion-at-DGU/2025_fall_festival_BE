@@ -271,9 +271,5 @@ CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
 
 CELERY_BEAT_SCHEDULE = {
-    'tasks': {
-        'task': 'board.tasks.test_task',
-        'schedule': 60, # 1분마다 실행
-        'args': (2, 5) # 테스트용 인자값
-    }
+    
 }
