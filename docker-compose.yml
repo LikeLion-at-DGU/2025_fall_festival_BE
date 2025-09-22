@@ -2,7 +2,7 @@
 
 services:
   django:
-    # image: hairyung2002/project:latest
+    # image: doyoun/project:latest
     build: .
     env_file: .env
     ports:
