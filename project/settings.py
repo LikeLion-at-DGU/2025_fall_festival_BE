@@ -233,22 +233,40 @@ ADMIN_UID_TTL = 3600
 #     },
 # }
 
-import os
+# S3 / Media 스토리지 스위치
+# django-environ 이용해 불린 판별
+USE_S3 = env.bool("USE_S3", default=False)
 
-if os.getenv("USE_S3") == "true":
+if USE_S3:
+    # S3 설정값 로드
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-northeast-2")
+
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_QUERYSTRING_AUTH = False          # 공개 URL
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None                # ACL 미사용, 정책으로 관리
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+
     STORAGES = {
-        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},  # S3
         "staticfiles": {
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
+
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"  # S3 도메인
+
 else:
     STORAGES = {
-        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},  # 로컬
         "staticfiles": {
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        }, 
+        },
     }
-    
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
