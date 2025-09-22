@@ -4,6 +4,7 @@ services:
   django:
     # image: doyoun/project:latest
     build: .
+    
     env_file: .env
     ports:
       - "8000:8000"
