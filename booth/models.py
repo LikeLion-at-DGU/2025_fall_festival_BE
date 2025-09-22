@@ -47,10 +47,10 @@ class Booth(models.Model):
     
 class BoothDetail(models.Model):
     booth = models.OneToOneField(Booth, on_delete=models.CASCADE)
-    all_table = models.IntegerField()
-    usage_table = models.IntegerField()
+    all_table = models.IntegerField(blank=True, null=True)
+    usage_table = models.IntegerField(blank=True, null=True)
     can_usage = models.BooleanField(default=True)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return f"[{self.booth.name}] {self.usage_table}/{self.all_table} (usable={self.can_usage})"
