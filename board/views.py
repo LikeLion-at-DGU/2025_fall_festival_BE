@@ -7,7 +7,6 @@ from rest_framework.permissions import AllowAny
 
 from .models import *
 from .serializers import *
-from .services import get_writer_from_uid
 from adminuser.services import resolve_admin_by_uid
 
 
@@ -131,7 +130,7 @@ class NoticeViewSet(viewsets.ModelViewSet):
         if not admin:  
             return Response(
                 {"message": "만료된 UID 입니다.",
-                 "uid_valid": False},
+                "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -158,7 +157,7 @@ class LostViewSet(viewsets.ModelViewSet):
         if not admin:  
             return Response(
                 {"message": "만료된 UID 입니다.",
-                 "uid_valid": False},
+                    "uid_valid": False},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -218,10 +217,6 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             )
 
         # 4. 부스 이벤트 생성
-        booth.is_event = True
-        booth.save()
-
-        
         booth_event = BoothEvent.objects.create(
             booth=booth,
             writer=admin.name,
@@ -230,9 +225,18 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             start_time=request.data.get('start_time'),
             end_time=request.data.get('end_time')
         )
+        
+        # 5. 현재 시간이 start_time~end_time 안에 있는지 검사
+        now = timezone.now()
+        if booth_event.start_time <= now < booth_event.end_time:
+            booth.is_event = True
+        else:
+            booth.is_event = False
+        booth.save()
 
         serializer = self.get_serializer(booth_event)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
     
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
