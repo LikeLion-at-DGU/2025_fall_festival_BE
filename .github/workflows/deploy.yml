@@ -16,7 +16,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd ~/2025_Fall_Festival_BE
+            cd ~/2025_fall_festival_BE
             git pull origin dev
             docker compose down
             docker compose build
