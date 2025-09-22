@@ -20,17 +20,19 @@ class BoardViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         admin = getattr(self.request, "user_admin", None)
+    
+        # 긴급공지인 Notice가 참조하는 Board PK들
+        emergency_board_ids = Notice.objects.filter(
+            is_emergency=True
+        ).values_list("board_ptr_id", flat=True)
 
-        if not admin:
-            return Board.objects.all().order_by("-created_at")
+        print("긴급공지 PK들:", list(emergency_board_ids))
 
-        # 본인 글만 보이도록
-        qs = Board.objects.filter(writer=admin.name)
 
-        # Staff, Stuco는 긴급공지 제외
-        if admin.role in ["Staff", "Stuco"]:
-            notice_ids = Notice.objects.filter(is_emergency=True).values_list("id", flat=True)
-            qs = qs.exclude(id__in=notice_ids)
+        qs = Board.objects.exclude(id__in=emergency_board_ids)
+
+        if admin:
+            qs = qs.filter(writer=admin.name)
 
         return qs.order_by("-created_at")
 
