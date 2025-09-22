@@ -17,8 +17,8 @@ class gameViewset(viewsets.ModelViewSet):
     def start(self, request, pk=None):
         user_id = request.data.get("user_id")
         
-        # user_id 없으면 새로 발급
-        if not user_id:
+        # user_id가 없거나 "none"이면 새로 발급
+        if not user_id or user_id == "none":
             if not request.session.session_key:
                 request.session.create()
             user_id = request.session.session_key
