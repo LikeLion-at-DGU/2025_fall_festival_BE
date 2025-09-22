@@ -247,30 +247,3 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             "writer": board.writer,
             "board_title": board.title
         })
-
-from .tasks import test_task
-from rest_framework.views import APIView
-from celery.result import AsyncResult
-from rest_framework.response import Response
-from django.http import JsonResponse
-
-
-
-# class Test(views.APIView):
-#     def get(self, request: HttpRequest):
-#         test_task.delay(2, 5)
-#         return Response("Celery Task Running")
-    
-# class Test(APIView):
-#     def get(self, request):
-#         task = test_task.delay(2, 5) # 수정
-#         return Response({"message":"Celery Task Running","task_id": task.id}, status=202)
-   
-   
-# def get_task_status(request, task_id: str):
-#     task_result = AsyncResult(task_id)
-#     return JsonResponse({
-#         "task_id": task_id,
-#         "task_status": task_result.status,
-#         "task_result": task_result.result,
-#     })
