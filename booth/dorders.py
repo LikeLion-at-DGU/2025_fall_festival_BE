@@ -1,8 +1,3 @@
-"""
-부스 정보 전체 조회 API 데이터 동기화 모듈
-5분마다 부스 정보를 API로 조회하여 DB에 동기화합니다.
-"""
-
 import requests
 import json
 import logging
@@ -46,12 +41,6 @@ class BoothDataSynchronizer:
         self.sync_thread = None
     
     def fetch_booth_data(self) -> Optional[Dict]:
-        """
-        API에서 부스 데이터를 가져옵니다.
-        
-        Returns:
-            Dict: API 응답 데이터 또는 None (실패시)
-        """
         try:
             logger.info("부스 데이터 API 호출 시작")
             
@@ -82,15 +71,6 @@ class BoothDataSynchronizer:
             return None
     
     def save_booth_data(self, api_data: Dict) -> bool:
-        """
-        API 데이터를 DB에 저장합니다.
-        
-        Args:
-            api_data (Dict): API에서 받은 데이터
-            
-        Returns:
-            bool: 저장 성공 여부
-        """
         try:
             booth_details = api_data.get('data', {}).get('boothDetails', [])
             
