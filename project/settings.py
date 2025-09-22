@@ -57,6 +57,9 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'storages',
     'polymorphic',
+    'celery',
+    "django_celery_results",
+    "django_celery_beat",
     
     'adminuser',
     'board',
@@ -268,5 +271,27 @@ else:
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = BASE_DIR / "media"
+
+
+    
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Redis
+# REDIS_HOST = os.getenv('REDIS_HOST')
+# REDIS_PORT = os.getenv('REDIS_PORT')
+# REDIS_PORT_SYSTEM = os.getenv('REDIS_PORT_SYSTEM')
+# REDIS_PW = os.getenv('REDIS_PW')
+
+
+# Celery
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+
+CELERY_BEAT_SCHEDULE = {
+    
+}
+

@@ -47,10 +47,10 @@ class Booth(models.Model):
     
 class BoothDetail(models.Model):
     booth = models.OneToOneField(Booth, on_delete=models.CASCADE)
-    all_table = models.IntegerField()
-    usage_table = models.IntegerField()
+    all_table = models.IntegerField(blank=True, null=True)
+    usage_table = models.IntegerField(blank=True, null=True)
     can_usage = models.BooleanField(default=True)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return f"[{self.booth.name}] {self.usage_table}/{self.all_table} (usable={self.can_usage})"
@@ -61,8 +61,8 @@ class Menu(models.Model):
     name = models.CharField(max_length=30)
     price = models.IntegerField()
     image_url = models.ImageField(upload_to="menus/images/", blank=True, null=True)
-    ingredient = models.IntegerField()
-    sold = models.IntegerField() # 판매량
+    ingredient = models.IntegerField(blank=True, null=True)
+    sold = models.IntegerField(blank=True, null=True) # 판매량
     
     def __str__(self):
         return f"[{self.booth.name}] {self.name} - {self.price}원 (sold={self.sold})"
