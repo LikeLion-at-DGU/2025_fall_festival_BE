@@ -1,9 +1,39 @@
-version: "3.9"
+# version: "3.9"
 
 services:
   django:
-    image: hairyung2002/project:latest
+    # image: hairyung2002/project:latest
+    build: .
     env_file: .env
     ports:
       - "8000:8000"
     restart: unless-stopped
+
+  redis:
+    image: redis:7.4
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  celery:
+    build: .
+    container_name: celery
+    command: celery -A project worker -l info
+    env_file: .env
+    depends_on:
+      - django
+      - redis
+    restart: unless-stopped
+
+  celery-beat:
+    build: .
+    container_name: celery-beat
+    env_file: .env
+    command: celery -A project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - django
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3 # 로컬환경에서 추가, 배포에서는 .env만 있으면 됌 (RDS)
