@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from .models import *
+from django.utils import timezone
 
 from rest_framework import serializers
-from .models import Booth, Location
+from .models import *
+from board.models import *
 
 class LocationSerializer(serializers.ModelSerializer):
     lat = serializers.FloatField(source="latitude")
@@ -14,6 +15,8 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class BoothListSerializer(serializers.ModelSerializer):
     booth_id = serializers.IntegerField(source="id")
+    event_id = serializers.SerializerMethodField()
+
     location = LocationSerializer()
     like_cnt = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -30,11 +33,29 @@ class BoothListSerializer(serializers.ModelSerializer):
             "booth_id",
             "name","category",
             "image_url",
-            "is_night","is_dorder","is_event",
+            "is_night","is_dorder","is_event", "event_id",
             "location", "distance_m",
             "business_days","start_time","end_time",
             "like_cnt", "is_liked",
         ]
+
+    def get_event_id(self, obj):
+        if not obj.is_event:
+            return None
+        
+        now = timezone.now()
+        event = (
+            BoothEvent.objects
+            .filter(
+                booth=obj,
+                category=Board.Category.EVENT,
+                start_time__lte=now,
+                end_time__gte=now
+            )
+            .order_by("start_time")
+            .first()
+        )
+        return event.id if event else None
 
     def get_image_url(self, obj):
         if obj.image_url:
