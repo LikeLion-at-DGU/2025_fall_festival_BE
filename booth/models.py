@@ -61,8 +61,8 @@ class Menu(models.Model):
     name = models.CharField(max_length=30)
     price = models.IntegerField()
     image_url = models.ImageField(upload_to="menus/images/", blank=True, null=True)
-    ingredient = models.IntegerField()
-    sold = models.IntegerField() # 판매량
+    ingredient = models.IntegerField(blank=True, null=True)
+    sold = models.IntegerField(blank=True, null=True) # 판매량
     
     def __str__(self):
         return f"[{self.booth.name}] {self.name} - {self.price}원 (sold={self.sold})"
