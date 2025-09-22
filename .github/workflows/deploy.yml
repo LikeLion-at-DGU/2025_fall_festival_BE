@@ -16,8 +16,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd ~/django-app
-            git pull origin main
+            cd ~/2025_Fall_Festival
+            git pull origin dev
             docker compose down
             docker compose build
             docker compose up -d
