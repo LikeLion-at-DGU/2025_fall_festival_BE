@@ -55,7 +55,6 @@ class BoothViewSet(viewsets.ModelViewSet):
         ordering = data.get("ordering", "auto")
         top_liked_3 = data.get("top_liked_3", False)
         is_night = data.get("is_night")
-        _is_night = data.get("is_night")
 
         if user_location and not ("x" in user_location and "y" in user_location):
             return Response(
