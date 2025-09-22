@@ -27,10 +27,8 @@ class BoardViewSet(viewsets.ModelViewSet):
         # 본인 글만 보이도록
         qs = Board.objects.filter(writer=admin.name)
 
-        # Staff, Stuco는 긴급공지 제외
-        if admin.role in ["Staff", "Stuco"]:
-            notice_ids = Notice.objects.filter(is_emergency=True).values_list("id", flat=True)
-            qs = qs.exclude(id__in=notice_ids)
+        notice_ids = Notice.objects.filter(is_emergency=True).values_list("id", flat=True)
+        qs = qs.exclude(id__in=notice_ids)
 
         return qs.order_by("-created_at")
 
