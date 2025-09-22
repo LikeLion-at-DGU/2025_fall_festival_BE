@@ -271,5 +271,12 @@ CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
 
 CELERY_BEAT_SCHEDULE = {
-    
+    'update-booth-event-status': {
+        'task': 'board.tasks.update_booth_event_status',
+        'schedule': 300.0,  # 5분마다 실행
+    },
+    'delete-expired-admin-uids': {
+        'task': 'adminuser.tasks.delete_expired_admin_uids',
+        'schedule': 3600.0,  # 1시간마다 실행
+    },
 }
