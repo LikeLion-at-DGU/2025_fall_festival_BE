@@ -117,15 +117,6 @@ class BoothDataSynchronizer:
             return False
     
     def _save_single_booth(self, booth_data: Dict) -> bool:
-        """
-        단일 부스 데이터를 DB에 저장합니다.
-        
-        Args:
-            booth_data (Dict): 단일 부스 데이터
-            
-        Returns:
-            bool: 저장 성공 여부
-        """
         try:
             booth_name = booth_data.get('boothName')
             all_table = booth_data.get('boothAllTable', 0)
@@ -169,13 +160,6 @@ class BoothDataSynchronizer:
             return False
     
     def _update_booth_menus(self, booth: Booth, menus_data: List[Dict]) -> None:
-        """
-        부스의 메뉴 정보를 업데이트합니다.
-        
-        Args:
-            booth (Booth): 부스 객체
-            menus_data (List[Dict]): 메뉴 데이터 리스트
-        """
         try:
             for menu_data in menus_data:
                 menu_name = menu_data.get('menuName')
@@ -203,12 +187,6 @@ class BoothDataSynchronizer:
             logger.error(f"메뉴 업데이트 중 오류: {str(e)}")
     
     def sync_once(self) -> bool:
-        """
-        한 번의 동기화를 수행합니다.
-        
-        Returns:
-            bool: 동기화 성공 여부
-        """
         logger.info("부스 데이터 동기화 시작")
         start_time = time.time()
         
@@ -232,9 +210,6 @@ class BoothDataSynchronizer:
         return success
     
     def _sync_loop(self) -> None:
-        """
-        주기적 동기화 루프
-        """
         logger.info(f"부스 데이터 동기화 시작: {self.sync_interval}초 간격으로 실행")
         
         while self.is_running:
@@ -252,12 +227,6 @@ class BoothDataSynchronizer:
         logger.info("부스 데이터 동기화 중지됨")
     
     def start_sync(self) -> bool:
-        """
-        주기적 동기화를 시작합니다.
-        
-        Returns:
-            bool: 시작 성공 여부
-        """
         if self.is_running:
             logger.warning("동기화가 이미 실행 중입니다.")
             return False
@@ -274,12 +243,6 @@ class BoothDataSynchronizer:
             return False
     
     def stop_sync(self) -> bool:
-        """
-        주기적 동기화를 중지합니다.
-        
-        Returns:
-            bool: 중지 성공 여부
-        """
         if not self.is_running:
             logger.warning("동기화가 실행 중이 아닙니다.")
             return False
@@ -296,12 +259,6 @@ class BoothDataSynchronizer:
             return False
     
     def get_status(self) -> Dict:
-        """
-        동기화 상태를 반환합니다.
-        
-        Returns:
-            Dict: 동기화 상태 정보
-        """
         return {
             'is_running': self.is_running,
             'sync_interval': self.sync_interval,
@@ -316,12 +273,6 @@ _synchronizer = None
 
 
 def get_synchronizer() -> BoothDataSynchronizer:
-    """
-    글로벌 동기화 인스턴스를 반환합니다.
-    
-    Returns:
-        BoothDataSynchronizer: 동기화 인스턴스
-    """
     global _synchronizer
     if _synchronizer is None:
         _synchronizer = BoothDataSynchronizer()
@@ -329,54 +280,27 @@ def get_synchronizer() -> BoothDataSynchronizer:
 
 
 def start_booth_sync() -> bool:
-    """
-    부스 데이터 동기화를 시작합니다.
-    
-    Returns:
-        bool: 시작 성공 여부
-    """
     synchronizer = get_synchronizer()
     return synchronizer.start_sync()
 
 
 def stop_booth_sync() -> bool:
-    """
-    부스 데이터 동기화를 중지합니다.
-    
-    Returns:
-        bool: 중지 성공 여부
-    """
     synchronizer = get_synchronizer()
     return synchronizer.stop_sync()
 
 
 def sync_booth_data_once() -> bool:
-    """
-    부스 데이터를 한 번 동기화합니다.
-    
-    Returns:
-        bool: 동기화 성공 여부
-    """
     synchronizer = get_synchronizer()
     return synchronizer.sync_once()
 
 
 def get_sync_status() -> Dict:
-    """
-    동기화 상태를 반환합니다.
-    
-    Returns:
-        Dict: 동기화 상태 정보
-    """
     synchronizer = get_synchronizer()
     return synchronizer.get_status()
 
 
 # Django 앱 시작 시 자동으로 동기화 시작
 def auto_start_sync():
-    """
-    Django 앱 시작 시 자동으로 동기화를 시작합니다. (로컬/운영 모두)
-    """
     try:
         success = start_booth_sync()
         if success:

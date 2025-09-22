@@ -19,16 +19,6 @@
 - 네트워크 오류, API 오류, DB 오류에 대한 종합적인 예외 처리
 - 상세한 로그 기록으로 문제 추적 가능
 
-## 설정 방법
-
-### 1. API 설정 수정
-
-`booth/dorders.py` 파일에서 실제 API 정보를 설정하세요:
-
-```python
-# 실제 API URL로 변경
-self.api_url = api_url or "https://your-actual-api-endpoint.com/booth/all"
-
 # 필요한 경우 Authorization 헤더 추가
 self.api_headers = api_headers or {
     "Content-Type": "application/json",
