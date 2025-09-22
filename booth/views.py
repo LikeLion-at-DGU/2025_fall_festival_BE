@@ -223,3 +223,112 @@ class BoothViewSet(viewsets.ModelViewSet):
     #     else:
     #         ip = request.META.get('REMOTE_ADDR', '')
     #     return ip
+    
+    @action(detail=False, methods=["post"], url_path="sync/start")
+    def start_sync(self, request):
+        """
+        POST /booths/sync/start/
+        부스 데이터 동기화 시작 (관리자 전용)
+        """
+        from .dorders import start_booth_sync
+        
+        try:
+            success = start_booth_sync()
+            if success:
+                return Response({
+                    "statusCode": 200,
+                    "message": "부스 데이터 동기화가 시작되었습니다.",
+                    "data": {}
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "statusCode": 400,
+                    "message": "부스 데이터 동기화 시작에 실패했습니다.",
+                    "data": {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "statusCode": 500,
+                "message": f"동기화 시작 중 오류가 발생했습니다: {str(e)}",
+                "data": {}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=["post"], url_path="sync/stop")
+    def stop_sync(self, request):
+        """
+        POST /booths/sync/stop/
+        부스 데이터 동기화 중지 (관리자 전용)
+        """
+        from .dorders import stop_booth_sync
+        
+        try:
+            success = stop_booth_sync()
+            if success:
+                return Response({
+                    "statusCode": 200,
+                    "message": "부스 데이터 동기화가 중지되었습니다.",
+                    "data": {}
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "statusCode": 400,
+                    "message": "부스 데이터 동기화 중지에 실패했습니다.",
+                    "data": {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "statusCode": 500,
+                "message": f"동기화 중지 중 오류가 발생했습니다: {str(e)}",
+                "data": {}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=["post"], url_path="sync/once")
+    def sync_once(self, request):
+        """
+        POST /booths/sync/once/
+        부스 데이터 한 번 동기화 (관리자 전용)
+        """
+        from .dorders import sync_booth_data_once
+        
+        try:
+            success = sync_booth_data_once()
+            if success:
+                return Response({
+                    "statusCode": 200,
+                    "message": "부스 데이터 동기화가 완료되었습니다.",
+                    "data": {}
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "statusCode": 400,
+                    "message": "부스 데이터 동기화에 실패했습니다.",
+                    "data": {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "statusCode": 500,
+                "message": f"동기화 중 오류가 발생했습니다: {str(e)}",
+                "data": {}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=["get"], url_path="sync/status")
+    def sync_status(self, request):
+        """
+        GET /booths/sync/status/
+        부스 데이터 동기화 상태 조회 (관리자 전용)
+        """
+        from .dorders import get_sync_status
+        
+        try:
+            sync_status_data = get_sync_status()
+            return Response({
+                "statusCode": 200,
+                "message": "동기화 상태 조회 성공",
+                "data": sync_status_data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "statusCode": 500,
+                "message": f"동기화 상태 조회 중 오류가 발생했습니다: {str(e)}",
+                "data": {}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
