@@ -24,7 +24,7 @@ class BoothDataSynchronizer:
         # 반대의 경우 false로 변경
         
         now = timezone.now()
-        events = BoothEvent.objects.filter(start_date__lte=now, end_date__gte=now)
+        events = BoothEvent.objects.filter(start_time__lte=now, end_time__gte=now)
         event_booth_ids = events.values_list('booth_id', flat=True).distinct()
 
         Booth.objects.filter(id__in=event_booth_ids).update(is_event=True)
