@@ -34,7 +34,6 @@ class BoothDataSynchronizer:
         self.api_url = api_url or "https://api.test-d-order.store/api/v2/public/d-order/booths/"
         self.api_headers = api_headers or {
             "Content-Type": "application/json",
-            # "Authorization": "Bearer your-token-here"  # 필요시 추가
         }
         self.sync_interval = 300  # 5분 (300초)
         self.is_running = False
@@ -54,7 +53,8 @@ class BoothDataSynchronizer:
             
             if response.status_code == 200:
                 data = response.json()
-                logger.info(f"부스 데이터 API 호출 성공: {len(data.get('data', {}).get('boothDetails', []))}개 부스")
+                booth_details = data.get('data', {}).get('boothDetails', [])
+                logger.info(f"부스 데이터 API 호출 성공: {len(booth_details)}개 부스")
                 return data
             else:
                 logger.error(f"API 호출 실패: HTTP {response.status_code} - {response.text}")
@@ -107,10 +107,9 @@ class BoothDataSynchronizer:
                 logger.warning("부스 이름이 없는 데이터를 건너뜁니다.")
                 return False
             
-            # 기존 부스 찾기 (이름으로 매칭) - 생성하지 않고 찾기만
+            # 기존 부스 찾기 (이름으로 매칭, is_dorder=True인 부스만)
             try:
-                booth = Booth.objects.get(name=booth_name)
-                logger.debug(f"기존 부스 발견: {booth_name}")
+                booth = Booth.objects.get(name=booth_name, is_dorder=True)
                 
                 # 부스 상세 정보 업데이트 (테이블 정보)
                 booth_detail, detail_created = BoothDetail.objects.update_or_create(
@@ -124,20 +123,26 @@ class BoothDataSynchronizer:
                 )
                 
                 # 메뉴 재고량 업데이트
-                self._update_booth_menus(booth, menus)
+                if menus:
+                    logger.info(f"메뉴 업데이트 시작: {booth.name} (메뉴 {len(menus)}개)")
+                    self._update_booth_menus(booth, menus)
                 
-                logger.debug(f"부스 업데이트 완료: {booth_name} (테이블: {usage_table}/{all_table})")
                 return True
                 
             except Booth.DoesNotExist:
-                logger.info(f"일치하는 부스를 찾을 수 없습니다: {booth_name}")
-                return False  # 기존 부스가 없으면 업데이트하지 않음
+                logger.debug(f"is_dorder=True인 부스를 찾을 수 없음: {booth_name}")
+                return False  # is_dorder=True가 아닌 부스는 업데이트하지 않음
             
         except Exception as e:
             #logger.error(f"단일 부스 데이터 저장 중 오류: {str(e)}")
             return False
     
     def _update_booth_menus(self, booth: Booth, menus_data: List[Dict]) -> None:
+        # is_dorder=True인 부스만 메뉴 업데이트
+        if not booth.is_dorder:
+            logger.debug(f"is_dorder=False인 부스는 메뉴 업데이트 건너뜀: {booth.name}")
+            return
+            
         for menu_data in menus_data:
             try:
                 menu_name = menu_data.get('menuName')
@@ -145,29 +150,20 @@ class BoothDataSynchronizer:
                 sales_quantity = menu_data.get('menuSalesQuantity', 0)
                 
                 if not menu_name:
-                    logger.warning(f"메뉴 이름이 없는 데이터를 건너뜁니다: {booth.name}")
                     continue
                 
-                # 기존 메뉴 찾기 (동일한 이름의 메뉴가 여러 개일 수 있음)
+                # 부스 이름이 같고, 메뉴 이름이 같은 메뉴 찾기
                 menus = Menu.objects.filter(booth=booth, name=menu_name)
                 
                 if menus.exists():
-                    # 동일한 이름의 메뉴가 여러 개 있으면 모두 업데이트
-                    updated_count = menus.update(
+                    # 메뉴 업데이트 실행
+                    menus.update(
                         ingredient=ingredient_reminder,
                         sold=sales_quantity
                     )
                     
-                    logger.debug(f"메뉴 재고 업데이트: {booth.name} - {menu_name} ({updated_count}개 메뉴, 재고: {ingredient_reminder}, 판매량: {sales_quantity})")
-                    
-                    if updated_count > 1:
-                        logger.warning(f"동일한 이름의 메뉴가 {updated_count}개 발견되어 모두 업데이트되었습니다: {booth.name} - {menu_name}")
-                else:
-                    # 기존 메뉴가 없으면 업데이트하지 않고 로그만 남김
-                    logger.info(f"기존 DB에 없는 메뉴는 업데이트하지 않습니다: {booth.name} - {menu_name}")
-                    
             except Exception as e:
-                logger.error(f"메뉴 업데이트 중 오류 ({booth.name} - {menu_name}): {str(e)}")
+                logger.error(f"메뉴 업데이트 중 오류 ({booth.name} - {menu_name if 'menu_name' in locals() else 'unknown'}): {str(e)}")
     
     def sync_once(self) -> bool:
         logger.info("부스 데이터 동기화 시작")
@@ -193,21 +189,40 @@ class BoothDataSynchronizer:
         return success
     
     def _sync_loop(self) -> None:
-        logger.info(f"부스 데이터 동기화 시작: {self.sync_interval}초 간격으로 실행")
+        logger.info(f"부스 데이터 동기화 스레드 시작: {self.sync_interval}초 간격으로 실행")
+        
+        # 첫 번째 동기화 즉시 실행
+        try:
+            logger.info("첫 번째 동기화 실행 중...")
+            self.sync_once()
+        except Exception as e:
+            logger.error(f"첫 번째 동기화 중 오류: {str(e)}")
         
         while self.is_running:
             try:
-                self.sync_once()
+                # 대기 시간을 1초씩 나누어서 중간에 종료 신호를 받을 수 있도록 함
+                logger.info(f"다음 동기화까지 {self.sync_interval}초 대기 중...")
+                for i in range(self.sync_interval):
+                    if not self.is_running:
+                        logger.info(f"동기화 중지 신호 받음 (대기 중 {i}초 경과)")
+                        break
+                    time.sleep(1)
+                
+                # 아직 실행 중이면 동기화 수행
+                if self.is_running:
+                    logger.info("주기적 동기화 실행 중...")
+                    success = self.sync_once()
+                    if success:
+                        logger.info("주기적 동기화 완료")
+                    else:
+                        logger.warning("주기적 동기화 실패")
+                        
             except Exception as e:
                 logger.error(f"동기화 루프 중 예상치 못한 오류: {str(e)}")
-            
-            # 다음 동기화까지 대기
-            for _ in range(self.sync_interval):
-                if not self.is_running:
-                    break
-                time.sleep(1)
+                # 오류가 발생해도 루프를 계속 실행
+                continue
         
-        logger.info("부스 데이터 동기화 중지됨")
+        logger.info("부스 데이터 동기화 스레드 종료됨")
     
     def start_sync(self) -> bool:
         if self.is_running:
@@ -216,9 +231,13 @@ class BoothDataSynchronizer:
         
         try:
             self.is_running = True
-            self.sync_thread = threading.Thread(target=self._sync_loop, daemon=True)
+            self.sync_thread = threading.Thread(
+                target=self._sync_loop, 
+                daemon=True,  # daemon=True로 변경하여 메인 스레드 종료 시 함께 종료
+                name="BoothDataSync"  # 스레드 이름 지정
+            )
             self.sync_thread.start()
-            logger.info("부스 데이터 동기화 시작됨")
+            logger.info(f"부스 데이터 동기화 스레드 시작됨 (Thread ID: {self.sync_thread.ident})")
             return True
         except Exception as e:
             logger.error(f"동기화 시작 중 오류: {str(e)}")
@@ -242,12 +261,19 @@ class BoothDataSynchronizer:
             return False
     
     def get_status(self) -> Dict:
+        thread_info = {
+            'exists': self.sync_thread is not None,
+            'alive': self.sync_thread.is_alive() if self.sync_thread else False,
+            'name': self.sync_thread.name if self.sync_thread else None,
+            'ident': self.sync_thread.ident if self.sync_thread else None
+        }
+        
         return {
             'is_running': self.is_running,
             'sync_interval': self.sync_interval,
             'api_url': self.api_url,
-            'thread_alive': self.sync_thread.is_alive() if self.sync_thread else False,
-            'last_update': timezone.now().isoformat()
+            'thread_info': thread_info,
+            'status_check_time': timezone.now().isoformat()
         }
 
 
@@ -285,10 +311,16 @@ def get_sync_status() -> Dict:
 # Django 앱 시작 시 자동으로 동기화 시작
 def auto_start_sync():
     try:
+        logger.info("부스 데이터 자동 동기화 시작 시도...")
         success = start_booth_sync()
         if success:
             logger.info("앱 시작 시 부스 데이터 동기화 자동 시작됨")
+            # 상태 확인
+            status = get_sync_status()
+            logger.info(f"동기화 상태: {status}")
         else:
             logger.warning("앱 시작 시 부스 데이터 동기화 자동 시작 실패")
     except Exception as e:
         logger.error(f"자동 동기화 시작 중 오류: {str(e)}")
+        import traceback
+        logger.error(f"상세 오류: {traceback.format_exc()}")
