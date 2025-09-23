@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from django.utils.dateparse import parse_datetime
 
 from .models import *
 from .serializers import *
@@ -223,6 +224,16 @@ class BoothEventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
             
+        # 문자열 -> datetime 변환
+        start_time = parse_datetime(request.data.get("start_time"))
+        end_time = parse_datetime(request.data.get("end_time"))
+        
+        # timezone-aware 만들기 (naive datetime이면)
+        if start_time and timezone.is_naive(start_time):
+            start_time = timezone.make_aware(start_time)
+        if end_time and timezone.is_naive(end_time):
+            end_time = timezone.make_aware(end_time)
+            
         # 3. 데이터 유효성 검사 및 오류 처리 (Serializer 활용)
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
@@ -237,8 +248,8 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             writer=admin.name,
             title=request.data.get('title'),
             detail=request.data.get('detail'),
-            start_time=request.data.get('start_time'),
-            end_time=request.data.get('end_time')
+            start_time=start_time,
+            end_time=end_time
         )
         
         # 5. 현재 시간이 start_time~end_time 안에 있는지 검사
@@ -249,8 +260,13 @@ class BoothEventViewSet(viewsets.ModelViewSet):
             booth.is_event = False
         booth.save()
 
-        serializer = self.get_serializer(booth_event)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({
+            "id": booth_event.id,
+            "title": booth_event.title,
+            "detail": booth_event.detail,
+            "start_time": booth_event.start_time,
+            "end_time": booth_event.end_time,
+        }, status=status.HTTP_201_CREATED)
     
     
     def update(self, request, *args, **kwargs):
