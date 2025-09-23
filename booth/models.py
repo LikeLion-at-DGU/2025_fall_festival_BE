@@ -66,11 +66,11 @@ class BoothDetail(models.Model):
         start = time(17, 30)  # 17:30
         end = time(23, 0)     # 23:00
 
-        # 17:30~23:00 사이면 DB 값 그대로, 아니면 False
+        # 17:30~23:00 사이면 DB 값 그대로, 아니면 null
         if start <= now <= end:
             return self.can_usage
         else:
-            return False
+            return None
 
 
 
