@@ -46,6 +46,10 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "drf_yasg",
     
+    'celery',
+    "django_celery_results",
+    "django_celery_beat",
+    
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
@@ -221,3 +225,34 @@ else:
     # S3 관련 패키지 제거
     if 'storages' in INSTALLED_APPS:
         INSTALLED_APPS.remove('storages')
+
+##############################################
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Redis
+# REDIS_HOST = os.getenv('REDIS_HOST')
+# REDIS_PORT = os.getenv('REDIS_PORT')
+# REDIS_PORT_SYSTEM = os.getenv('REDIS_PORT_SYSTEM')
+# REDIS_PW = os.getenv('REDIS_PW')
+
+
+# Celery
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0" 
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
+
+CELERY_BEAT_SCHEDULE = {
+    'update-booth-event-status': {
+        'task': 'board.tasks.update_booth_event_status',
+        'schedule': 300.0,  # 5분마다 실행
+    },
+    'delete-expired-admin-uids': {
+        'task': 'adminuser.tasks.delete_expired_admin_uids',
+        'schedule': 1800.0,  # 30분마다 실행
+    },
+}
