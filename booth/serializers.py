@@ -126,7 +126,9 @@ class DorderMenuSerializer(serializers.ModelSerializer):
         return obj.id in top3_ids
 
     def get_is_soldout(self, obj):
-        return obj.ingredient < 5
+        if obj.ingredient is not None:
+            return obj.ingredient < 5
+        return False 
 
     def get_image_url(self, obj):
         if obj.image_url:
