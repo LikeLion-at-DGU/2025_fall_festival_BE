@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.utils import timezone
 
 from .models import *
 from .serializers import *
@@ -110,13 +111,16 @@ class BoothViewSet(viewsets.ModelViewSet):
         if not nearest_location:
             return Response({"error": "No valid locations"}, status=404)
 
-        # 2) 해당 location의 booth 조회
-        booths = list(Booth.objects.filter(location=nearest_location))
-
+        # 2) 해당 locationn의 '부스' 카테고리만 조회
+        booths_qs = Booth.objects.filter(
+        location=nearest_location,
+        category=Booth.Category.BOOTH,   # ← 핵심: 카테고리 제한
+        )
         if isinstance(is_night, bool):
-            booths = booths.filter(is_night=is_night)
+            booths_qs = booths_qs.filter(is_night=is_night)
 
         # 3) 랜덤 3개 선택
+        booths = list(booths_qs)
         if len(booths) > 3:
             booths = random.sample(booths, 3)
 

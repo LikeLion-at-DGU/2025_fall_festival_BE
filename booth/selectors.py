@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.db.models import Value, F, FloatField, ExpressionWrapper
+from django.db.models import Value, F, Q, FloatField, ExpressionWrapper
 from django.db.models.functions import Coalesce
 from booth.models import *
 from math import radians, sin, cos, sqrt, atan2
@@ -95,12 +95,8 @@ def get_toilet_detail(booth_id: int) -> Booth:
 #Booth 목록 조회용 selector
 def get_booth_list(date=None, types=None, building_id=None, user_location=None,
                     ordering="auto", top_liked_3=False, is_night=None, is_event=None):
-
-     if not date:
-          date = timezone.localdate()
-
+     
      qs = Booth.objects.all().select_related("location")
-     qs = qs.filter(boothschedule__day=date)
 
      # 종류 필터
      if types:
@@ -118,9 +114,12 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
      if is_event is not None:
           qs = qs.filter(is_event=is_event)
 
-     # 좋아요 Top3 처리
+     if date and types and (Booth.Category.BOOTH in types):
+          qs = qs.filter(category=Booth.Category.BOOTH, boothschedule__day=date)
+
+     # 좋아요 Top3 처리 (0개 제외)
      if top_liked_3:
-          return qs.order_by("-like_cnt")[:3]
+          return qs.filter(like_cnt__gt=0).order_by("-like_cnt")[:3]
 
      booths = list(qs)
 
@@ -147,7 +146,5 @@ def get_booth_list(date=None, types=None, building_id=None, user_location=None,
                booths.sort(key=lambda b: b.name, reverse=True)
           else:
                booths.sort(key=lambda b: b.name)
-
-     #TODO: 현재 사용자 좋아요 여부 annotate 필요
 
      return booths

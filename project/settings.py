@@ -28,7 +28,6 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
-print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
 
 
 # Application definition
@@ -133,24 +132,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        # UID 인증이 최상단에서 작동되어야 함.
-        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
         #"common.authentication.CookieJwtAuthentication",
-
-        # UID 인증이 최상단에서 작동되어야 함.
-        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
-
-        "rest_framework_simplejwt.authentication.JWTAuthentication", # 기존 JWT 유지
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        'rest_framework.permissions.AllowAny',  # 기본은 모두 접근 허용, 보호 API만 퍼미션 적용
-        #'rest_framework.permissions.IsAuthenticated', # 기본 보안 유지
+        'rest_framework.permissions.IsAuthenticated',
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
@@ -205,73 +200,26 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "https://2025fallfestivaldgu.netlify.app",
-    "https://dgu-fallfesta.site"
 ]
 
-# AWS_STORAGE_BUCKET_NAME = "dummy-bucket"
+USE_S3 = env.bool("USE_S3", default=False)
 
-
-# 캐시 설정 추가 (UID -> admin_id 매핑 저장. 개발은 LocMem, 배포는 Redis)
-
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-admin-cache",
-    }
-}
-
-# UID 만료 시간 (초) - 1시간
-ADMIN_UID_TTL = 3600
-# STORAGES = {
-#     "default": {
-#         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-#     },
-#     "staticfiles": {
-#         # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
-#         # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
-#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-#     },
-# }
-
-import os
-
-if os.getenv("USE_S3") == "true":
+if USE_S3:
+    # 배포용 S3
     STORAGES = {
-        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
         },
     }
 else:
-    STORAGES = {
-        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        }, 
-    }
-    
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+    # 로컬 개발용
+    STATIC_URL = "/static/"
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'booth_sync.log',
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'booth.dorders': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
+    # S3 관련 패키지 제거
+    if 'storages' in INSTALLED_APPS:
+        INSTALLED_APPS.remove('storages')
