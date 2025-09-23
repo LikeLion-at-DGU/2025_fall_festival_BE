@@ -102,9 +102,11 @@ class BoardViewSet(viewsets.ModelViewSet):
 
         related = (
             Board.objects.filter(created_at__lt=created_at)
+            .exclude(
+                id__in=Notice.objects.filter(is_emergency=True).values_list("board_ptr_id", flat=True)
+            )
             .order_by("-created_at")[:3]
         )
-
         serializer = BoardListSerializer(related, many=True)
         return Response({
             "message": "관련 게시글 조회에 성공하였습니다.",
