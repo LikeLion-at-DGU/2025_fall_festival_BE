@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("booth", "0005_alter_booth_image_url"),
+        ("booth", "0001_initial"),
     ]
 
     operations = [
