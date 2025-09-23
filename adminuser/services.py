@@ -32,7 +32,7 @@ def issue_uid_by_code(admin_code: str):
     uid = _generate_uid(8)
 
     # 캐시에 UID->admin.id 매핑을 30초.. 동안 저장
-    ttl = getattr(settings, "ADMIN_UID_TTL", 3600)  # 기본 만료시간 = 1시간
+    ttl = getattr(settings, "ADMIN_UID_TTL", 30)  # 기본 만료시간 = 1시간, 3600
     cache.set(f"{CACHE_KEY_PREFIX}{uid}", admin.id, ttl)
 
     # DB에 UID와 만료시간 저장
