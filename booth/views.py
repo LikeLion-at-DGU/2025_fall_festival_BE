@@ -96,35 +96,54 @@ class BoothViewSet(viewsets.ModelViewSet):
         user_x = float(user_location["x"])
         user_y = float(user_location["y"])
 
-        # 1) 가장 가까운 Location 찾기
+        # 1) 모든 Location 거리순 정렬  # ← 여기 수정됨
         locations = list(Location.objects.all())
-        nearest_location = None
-        min_dist = float("inf")
-
+        locations_with_dist = []
         for loc in locations:
             if loc.latitude and loc.longitude:
                 dist = calculate_distance(user_x, user_y, loc.latitude, loc.longitude)
-                if dist < min_dist:
-                    min_dist = dist
-                    nearest_location = loc
+                locations_with_dist.append((loc, dist))
 
-        if not nearest_location:
+        if not locations_with_dist:
             return Response({"error": "No valid locations"}, status=404)
 
-        # 2) 해당 locationn의 '부스' 카테고리만 조회
-        booths_qs = Booth.objects.filter(
-        location=nearest_location,
-        category=Booth.Category.BOOTH,   # ← 핵심: 카테고리 제한
-        )
-        if isinstance(is_night, bool):
-            booths_qs = booths_qs.filter(is_night=is_night)
+        locations_with_dist.sort(key=lambda x: x[1])  # 거리 오름차순
+
+        nearest_location = None
+        min_dist = None
+        booths = []
+
+        # 2) 가까운 순서대로 탐색, Booth 있으면 break  # ← 여기 수정됨
+        for loc, dist in locations_with_dist:
+            qs = Booth.objects.filter(
+                location=loc,
+                category=Booth.Category.BOOTH
+            )
+            if isinstance(is_night, bool):
+                qs = qs.filter(is_night=is_night)
+
+            if qs.exists():
+                nearest_location = loc
+                min_dist = dist
+                booths = list(qs)
+                break
+
+        if not booths:
+            return Response({
+                "nearest_location": None,
+                "distance_m": None,
+                "booths": []
+            }, status=200)
 
         # 3) 랜덤 3개 선택
-        booths = list(booths_qs)
         if len(booths) > 3:
             booths = random.sample(booths, 3)
 
-        serializer = BoothListSerializer(booths, many=True, context={"request": request, "date": data.get("date")})
+        serializer = BoothListSerializer(
+            booths,
+            many=True,
+            context={"request": request, "date": data.get("date")}
+        )
 
         return Response({
             "nearest_location": nearest_location.name,
