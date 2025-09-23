@@ -214,8 +214,9 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
             sorted_menus = sorted(menus, key=lambda x: "입장료" not in x.name)
             return DorderMenuSerializer(sorted_menus, many=True, context={"request": request}).data
         else:
-            # 일반 부스 → 기본 MenuSerializer
-            return MenuSerializer(menus, many=True, context={"request": request}).data
+            # 일반 부스 → 기본 
+            sorted_menus = sorted(menus, key=lambda x: "입장료" not in x.name)
+            return MenuSerializer(sorted_menus, many=True, context={"request": request}).data
 
     def get_booth_can_usage(self, obj):
         if not obj.is_dorder:
