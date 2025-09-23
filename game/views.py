@@ -62,7 +62,7 @@ class GameViewset(viewsets.ModelViewSet):
         total_success_count = Game.objects.filter(is_end=True).count()
 
         # 쿠폰 당첨 순번
-        WINNING_NUMBERS = [1, 7, 10, 13, 15]
+        WINNING_NUMBERS = [4, 31, 97, 199, ]
         is_winner = total_success_count in WINNING_NUMBERS
         boothlist = ["프론티어", "공과대학", "문과대학", "푸름누리"]
 
