@@ -107,64 +107,74 @@ class BoothDataSynchronizer:
                 logger.warning("부스 이름이 없는 데이터를 건너뜁니다.")
                 return False
             
-            # 부스 찾기 또는 생성 (이름으로 매칭)
-            booth, booth_created = Booth.objects.get_or_create(
-                name=booth_name,
-                defaults={
-                    'category': Booth.Category.BOOTH,
-                    'is_dorder': True,  # dorder 시스템에서 관리되는 부스로 표시
-                }
-            )
-            
-            # 부스 상세 정보 업데이트 또는 생성
-            booth_detail, detail_created = BoothDetail.objects.update_or_create(
-                booth=booth,
-                defaults={
-                    'all_table': all_table,
-                    'usage_table': usage_table,
-                    'can_usage': usage_table < all_table,  # 사용 가능한 테이블이 있으면 True
-                    'description': f'dorder 시스템에서 자동 동기화된 부스 정보 (마지막 업데이트: {timezone.now()})'
-                }
-            )
-            
-            # 메뉴 정보 업데이트
-            self._update_booth_menus(booth, menus)
-            
-            action = "생성" if booth_created else "업데이트"
-            logger.debug(f"부스 {action}: {booth_name} (테이블: {usage_table}/{all_table})")
-            
-            return True
+            # 기존 부스 찾기 (이름으로 매칭) - 생성하지 않고 찾기만
+            try:
+                booth = Booth.objects.get(name=booth_name)
+                logger.debug(f"기존 부스 발견: {booth_name}")
+                
+                # 부스 상세 정보 업데이트 (테이블 정보)
+                booth_detail, detail_created = BoothDetail.objects.update_or_create(
+                    booth=booth,
+                    defaults={
+                        'all_table': all_table,
+                        'usage_table': usage_table,
+                        'can_usage': usage_table < all_table,  # 사용 가능한 테이블이 있으면 True
+                        'description': f'dorder 시스템에서 자동 동기화된 부스 정보 (마지막 업데이트: {timezone.now()})'
+                    }
+                )
+                
+                # 메뉴 재고량 업데이트
+                self._update_booth_menus(booth, menus)
+                
+                logger.debug(f"부스 업데이트 완료: {booth_name} (테이블: {usage_table}/{all_table})")
+                return True
+                
+            except Booth.DoesNotExist:
+                logger.info(f"일치하는 부스를 찾을 수 없습니다: {booth_name}")
+                return False  # 기존 부스가 없으면 업데이트하지 않음
             
         except Exception as e:
             logger.error(f"단일 부스 데이터 저장 중 오류: {str(e)}")
             return False
     
     def _update_booth_menus(self, booth: Booth, menus_data: List[Dict]) -> None:
-        try:
-            for menu_data in menus_data:
+        for menu_data in menus_data:
+            try:
                 menu_name = menu_data.get('menuName')
                 ingredient_reminder = menu_data.get('menuIngredidentReminder', 0)
                 sales_quantity = menu_data.get('menuSalesQuantity', 0)
                 
                 if not menu_name:
+                    logger.warning(f"메뉴 이름이 없는 데이터를 건너뜁니다: {booth.name}")
                     continue
                 
-                # 메뉴 업데이트 또는 생성
-                menu, menu_created = Menu.objects.update_or_create(
-                    booth=booth,
-                    name=menu_name,
-                    defaults={
-                        'ingredient': ingredient_reminder,
-                        'sold': sales_quantity,
-                        'price': 0,  # API에서 가격 정보가 없으므로 기본값 0
-                    }
-                )
+                # 기존 메뉴 찾기 (동일한 이름의 메뉴가 여러 개일 수 있음)
+                menus = Menu.objects.filter(booth=booth, name=menu_name)
                 
-                action = "생성" if menu_created else "업데이트"
-                logger.debug(f"메뉴 {action}: {booth.name} - {menu_name} (재고: {ingredient_reminder}, 판매량: {sales_quantity})")
-                
-        except Exception as e:
-            logger.error(f"메뉴 업데이트 중 오류: {str(e)}")
+                if menus.exists():
+                    # 동일한 이름의 메뉴가 여러 개 있으면 모두 업데이트
+                    updated_count = menus.update(
+                        ingredient=ingredient_reminder,
+                        sold=sales_quantity
+                    )
+                    
+                    logger.debug(f"메뉴 재고 업데이트: {booth.name} - {menu_name} ({updated_count}개 메뉴, 재고: {ingredient_reminder}, 판매량: {sales_quantity})")
+                    
+                    if updated_count > 1:
+                        logger.warning(f"동일한 이름의 메뉴가 {updated_count}개 발견되어 모두 업데이트되었습니다: {booth.name} - {menu_name}")
+                else:
+                    # 기존 메뉴가 없으면 새로 생성
+                    Menu.objects.create(
+                        booth=booth,
+                        name=menu_name,
+                        ingredient=ingredient_reminder,
+                        sold=sales_quantity,
+                        price=0  # 디오더 API에서 가격 정보가 없으므로 기본값 0
+                    )
+                    logger.info(f"새 메뉴 생성: {booth.name} - {menu_name} (재고: {ingredient_reminder}, 판매량: {sales_quantity})")
+                    
+            except Exception as e:
+                logger.error(f"메뉴 업데이트 중 오류 ({booth.name} - {menu_name}): {str(e)}")
     
     def sync_once(self) -> bool:
         logger.info("부스 데이터 동기화 시작")
