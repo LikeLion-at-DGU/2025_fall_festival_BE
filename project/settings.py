@@ -260,3 +260,10 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 3600.0,  # 1시간마다 실행
     },
 }
+
+CELERY_BEAT_SCHEDULE.update({
+    'sync-booth-data-every-5-minutes': {
+        'task': 'booth.tasks.sync_booth_data_task',
+        'schedule': 300.0,  # 5분마다 실행
+    },
+})
