@@ -118,8 +118,8 @@ class BoothDataSynchronizer:
                     defaults={
                         'all_table': all_table,
                         'usage_table': usage_table,
-                        'can_usage': usage_table < all_table,  # 사용 가능한 테이블이 있으면 True
-                        'description': f'dorder 시스템에서 자동 동기화된 부스 정보 (마지막 업데이트: {timezone.now()})'
+                        'can_usage': usage_table < all_table  # 사용 가능한 테이블이 있으면 True
+                        # 'description'은 업데이트하지 않음
                     }
                 )
                 
@@ -163,15 +163,8 @@ class BoothDataSynchronizer:
                     if updated_count > 1:
                         logger.warning(f"동일한 이름의 메뉴가 {updated_count}개 발견되어 모두 업데이트되었습니다: {booth.name} - {menu_name}")
                 else:
-                    # 기존 메뉴가 없으면 새로 생성
-                    Menu.objects.create(
-                        booth=booth,
-                        name=menu_name,
-                        ingredient=ingredient_reminder,
-                        sold=sales_quantity,
-                        price=0  # 디오더 API에서 가격 정보가 없으므로 기본값 0
-                    )
-                    logger.info(f"새 메뉴 생성: {booth.name} - {menu_name} (재고: {ingredient_reminder}, 판매량: {sales_quantity})")
+                    # 기존 메뉴가 없으면 업데이트하지 않고 로그만 남김
+                    logger.info(f"기존 DB에 없는 메뉴는 업데이트하지 않습니다: {booth.name} - {menu_name}")
                     
             except Exception as e:
                 logger.error(f"메뉴 업데이트 중 오류 ({booth.name} - {menu_name}): {str(e)}")
