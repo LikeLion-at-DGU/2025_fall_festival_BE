@@ -135,10 +135,6 @@ class BoothViewSet(viewsets.ModelViewSet):
                 "booths": []
             }, status=200)
 
-        # 3) 랜덤 3개 선택
-        if len(booths) > 3:
-            booths = random.sample(booths, 3)
-
         serializer = BoothListSerializer(
             booths,
             many=True,
