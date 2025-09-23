@@ -1,9 +1,14 @@
 from django.db import models
+from django.utils import timezone
 
 # Create your models here.
-class SiteCoupon(models.Model):
+class Coupon(models.Model):
+    booth = models.CharField(max_length=100)
+    serial_code = models.CharField(max_length=20, unique=True)
     price = models.IntegerField()
     is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         status = "사용됨" if self.is_used else "미사용"
@@ -14,8 +19,11 @@ class Game(models.Model):
     is_started = models.BooleanField(default=False)
     try_times = models.IntegerField(default=0)
     is_end = models.BooleanField(default=False)
-    coupon = models.ForeignKey(SiteCoupon, on_delete=models.CASCADE, null=True, blank=True)
+    coupon = models.ForeignKey(Coupon, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         status = "종료" if self.is_end else "진행중"
-        return f"[게임 {self.id}] {status} - 쿠폰 {self.coupon.id} (user: {self.user_id})"
+        coupon_info = f"쿠폰 {self.coupon.id}" if self.coupon else "쿠폰 없음"
+        return f"[게임 {self.id}] {status} - {coupon_info} (user: {self.user_id})"
