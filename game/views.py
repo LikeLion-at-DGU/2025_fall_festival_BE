@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import Game, Coupon
 from .serializers import GameSerializer
 from booth.models import Booth
+from django.db import transaction
 
 class GameViewset(viewsets.ModelViewSet):
     queryset = Game.objects.all()
@@ -86,20 +87,31 @@ class GameViewset(viewsets.ModelViewSet):
         if game.coupon:
             return Response({"message": "이미 쿠폰을 받으셨습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 부스의 미사용 쿠폰 중 ID 작은 순서대로 하나 가져오기
-        coupon = Coupon.objects.filter(booth=booth_name, is_used=False).order_by('id').first()
-        if not coupon:
-            return Response({"message": "해당 부스의 사용 가능한 쿠폰이 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        # 부스의 미사용 쿠폰 중 ID 작은 순서대로 하나 가져와 원자적으로 is_used를 갱신
+        with transaction.atomic():
+            coupon_obj = Coupon.objects.filter(booth=booth_name, is_used=False).order_by('id').first()
+            if not coupon_obj:
+                return Response({"message": "해당 부스의 사용 가능한 쿠폰이 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 게임에 쿠폰 연결
-        game.coupon = coupon
-        game.save()
+            # DB 레벨에서 is_used를 원자적으로 업데이트. 다른 요청과의 경쟁을 피함.
+            updated = Coupon.objects.filter(id=coupon_obj.id, is_used=False).update(is_used=True)
+            if updated == 0:
+                # 다른 트랜잭션이 이미 사용 처리했을 수 있음
+                return Response({"message": "해당 부스의 사용 가능한 쿠폰이 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+            # 게임에 쿠폰 연결
+            game.coupon = coupon_obj
+            game.save()
+
+            # 객체 인스턴스에 반영
+            coupon_obj.is_used = True
 
         return Response({
             "message": "쿠폰이 발급되었습니다.",
             "data": {
-                "coupon_id": coupon.id,
-                "coupon_code": coupon.serial_code,
+                "coupon_id": coupon_obj.id,
+                "coupon_code": coupon_obj.serial_code,
+                "coupon_is_used": coupon_obj.is_used,
                 "booth_name": booth_name
             }
         }, status=status.HTTP_200_OK)
