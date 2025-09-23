@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("booth", "0006_alter_like_user_id_alter_menu_image_url"),
-        ("booth", "0006_alter_menu_image_url"),
     ]
 
     operations = []

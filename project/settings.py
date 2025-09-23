@@ -28,7 +28,6 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
-print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
 
 
 # Application definition
@@ -57,9 +56,6 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'storages',
     'polymorphic',
-    'celery',
-    "django_celery_results",
-    "django_celery_beat",
     
     'adminuser',
     'board',
@@ -136,24 +132,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        # UID 인증이 최상단에서 작동되어야 함.
-        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
         #"common.authentication.CookieJwtAuthentication",
-
-        # UID 인증이 최상단에서 작동되어야 함.
-        "adminuser.authentication.UIDAuthentication", # 커스텀 인증 추가
-
-        "rest_framework_simplejwt.authentication.JWTAuthentication", # 기존 JWT 유지
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        'rest_framework.permissions.AllowAny',  # 기본은 모두 접근 허용, 보호 API만 퍼미션 적용
-        #'rest_framework.permissions.IsAuthenticated', # 기본 보안 유지
+        'rest_framework.permissions.IsAuthenticated',
     ),
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
@@ -208,97 +200,26 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "https://2025fallfestivaldgu.netlify.app",
-    "https://dgu-fallfesta.site"
 ]
 
-# AWS_STORAGE_BUCKET_NAME = "dummy-bucket"
-
-
-# 캐시 설정 추가 (UID -> admin_id 매핑 저장. 개발은 LocMem, 배포는 Redis)
-
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-admin-cache",
-    }
-}
-
-# UID 만료 시간 (초) - 1시간
-ADMIN_UID_TTL = 3600
-# STORAGES = {
-#     "default": {
-#         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-#     },
-#     "staticfiles": {
-#         # 정적파일도 S3로 올릴 거면 아래 사용, 아니면 기존 Whitenoise 유지
-#         # "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
-#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-#     },
-# }
-
-# S3 / Media 스토리지 스위치
-# django-environ 이용해 불린 판별
 USE_S3 = env.bool("USE_S3", default=False)
 
 if USE_S3:
-    # S3 설정값 로드
-    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
-    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
-    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
-    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-northeast-2")
-
-    AWS_S3_SIGNATURE_VERSION = "s3v4"
-    AWS_QUERYSTRING_AUTH = False          # 공개 URL
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = None                # ACL 미사용, 정책으로 관리
-    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
-
-    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
-
+    # 배포용 S3
     STORAGES = {
-        "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},  # S3
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            "BACKEND": "storages.backends.s3boto3.S3StaticStorage",
         },
     }
-
-    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"  # S3 도메인
-
 else:
-    STORAGES = {
-        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},  # 로컬
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
-    }
+    # 로컬 개발용
+    STATIC_URL = "/static/"
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+    STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-
-    
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-# Redis
-# REDIS_HOST = os.getenv('REDIS_HOST')
-# REDIS_PORT = os.getenv('REDIS_PORT')
-# REDIS_PORT_SYSTEM = os.getenv('REDIS_PORT_SYSTEM')
-# REDIS_PW = os.getenv('REDIS_PW')
-
-
-# Celery
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0" 
-CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
-
-CELERY_BEAT_SCHEDULE = {
-    'update-booth-event-status': {
-        'task': 'board.tasks.update_booth_event_status',
-        'schedule': 300.0,  # 5분마다 실행
-    },
-    'delete-expired-admin-uids': {
-        'task': 'adminuser.tasks.delete_expired_admin_uids',
-        'schedule': 3600.0,  # 1시간마다 실행
-    },
-}
-
+    # S3 관련 패키지 제거
+    if 'storages' in INSTALLED_APPS:
+        INSTALLED_APPS.remove('storages')
