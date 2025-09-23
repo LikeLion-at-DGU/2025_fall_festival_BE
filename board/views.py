@@ -120,6 +120,17 @@ class BoardViewSet(viewsets.ModelViewSet):
                 return Response({"message": "긴급 공지가 없습니다."}, status=404)
             serializer = NoticeSerializer(emergency)
             return Response({"message": "긴급 공지 조회에 성공하였습니다.", "notice": serializer.data})
+        
+        elif request.method == "PATCH":
+            emergency = Notice.objects.filter(is_emergency=True).order_by("created_at").first()
+            if not emergency:
+                return Response({"message": "긴급 공지가 없습니다."}, status=404)
+
+            serializer = NoticeSerializer(emergency, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "긴급 공지 수정에 성공하였습니다.", "notice": serializer.data})
+            return Response(serializer.errors, status=400)
 
 class NoticeViewSet(viewsets.ModelViewSet):
     queryset = Notice.objects.all().order_by("-created_at")
