@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from adminuser.models import Admin
+from datetime import time
 
 
 class Location(models.Model):
@@ -54,6 +55,23 @@ class BoothDetail(models.Model):
     
     def __str__(self):
         return f"[{self.booth.name}] {self.usage_table}/{self.all_table} (usable={self.can_usage})"
+    
+    @property
+    def dynamic_can_usage(self):
+        # 일반 부스는 DB 값 그대로 반환
+        if not self.booth.is_dorder or not self.booth.is_night:
+            return self.can_usage
+
+        now = timezone.localtime().time()  # 서버 로컬 시간 기준
+        start = time(17, 30)  # 17:30
+        end = time(23, 0)     # 23:00
+
+        # 17:30~23:00 사이면 DB 값 그대로, 아니면 False
+        if start <= now <= end:
+            return self.can_usage
+        else:
+            return False
+
 
 
 class Menu(models.Model):

@@ -178,9 +178,9 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True)
     location_description = serializers.CharField(source="location.description", read_only=True)
     schedules = ScheduleSerializer(source="boothschedule_set", many=True, read_only=True)
-    menus = DorderMenuSerializer(source="menu_set", many=True, read_only=True)
+    menus = serializers.SerializerMethodField()
     booth_description = serializers.CharField(source="boothdetail.description", read_only=True)
-    booth_can_usage = serializers.CharField(source="boothdetail.can_usage", read_only=True)
+    booth_can_usage = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -204,17 +204,34 @@ class NightBoothDetailSerializer(serializers.ModelSerializer):
             request = self.context.get("request")
             return request.build_absolute_uri(obj.image_url.url)
         return None
-
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
+    
+    def get_menus(self, obj):
         request = self.context.get("request")
-        if not instance.is_dorder:
-            rep.pop("booth_can_usage", None)
-            rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
-        else:
-            rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
+        menus = list(obj.menu_set.all())
 
-        return rep
+        if obj.is_dorder:
+            # Dorder 부스 → '입장료' 맨 앞으로
+            sorted_menus = sorted(menus, key=lambda x: "입장료" not in x.name)
+            return DorderMenuSerializer(sorted_menus, many=True, context={"request": request}).data
+        else:
+            # 일반 부스 → 기본 MenuSerializer
+            return MenuSerializer(menus, many=True, context={"request": request}).data
+
+    def get_booth_can_usage(self, obj):
+        if not obj.is_dorder:
+            return None
+        return obj.boothdetail.dynamic_can_usage
+
+    # def to_representation(self, instance):
+    #     rep = super().to_representation(instance)
+    #     request = self.context.get("request")
+    #     if not instance.is_dorder:
+    #         rep.pop("booth_can_usage", None)
+    #         rep["menus"] = MenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
+    #     else:
+    #         rep["menus"] = DorderMenuSerializer(instance.menu_set.all(), many=True, context={"request": request}).data
+
+    #     return rep
     
 class DrinkDetailSerializer(serializers.ModelSerializer):
     location_name = serializers.CharField(source="location.name", read_only=True) 
