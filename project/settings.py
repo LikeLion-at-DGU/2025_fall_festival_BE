@@ -253,6 +253,6 @@ CELERY_BEAT_SCHEDULE = {
     },
     'delete-expired-admin-uids': {
         'task': 'adminuser.tasks.delete_expired_admin_uids',
-        'schedule': 1800.0,  # 30분마다 실행
+        'schedule': 3600.0,  # 1시간마다 실행
     },
 }

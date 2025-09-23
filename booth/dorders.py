@@ -136,7 +136,7 @@ class BoothDataSynchronizer:
             return True
             
         except Exception as e:
-            logger.error(f"단일 부스 데이터 저장 중 오류: {str(e)}")
+            #logger.error(f"단일 부스 데이터 저장 중 오류: {str(e)}")
             return False
     
     def _update_booth_menus(self, booth: Booth, menus_data: List[Dict]) -> None:
