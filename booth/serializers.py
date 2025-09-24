@@ -72,7 +72,13 @@ class BoothListSerializer(serializers.ModelSerializer):
         return obj.boothschedule_set.filter(day=date).order_by("start_time").first()
     
     def get_like_cnt(self, obj):
-        return obj.like_cnt
+        
+        like = obj.like_cnt
+        
+        if like >=300:
+            return 300
+        else :
+            return like
 
     def get_is_liked(self, obj):
         return False
