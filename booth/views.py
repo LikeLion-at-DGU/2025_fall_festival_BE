@@ -186,57 +186,56 @@ class BoothViewSet(viewsets.ModelViewSet):
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
     
     
-    # @action(detail=True, methods=["post"], url_path="likes")
-    # def likes(self, request, pk=None):
-    #     booth = get_object_or_404(Booth, id=pk)
+    @action(detail=True, methods=["post"], url_path="likes")
+    def likes(self, request, pk=None):
+        booth = get_object_or_404(Booth, id=pk)
 
-    #     # 프론트에서 보낸 user_id 확인 (첫 요청 시 null일 수 있음)
-    #     user_id = request.data.get("user_id")
+        # 프론트에서 보낸 user_id 확인 (첫 요청 시 null일 수 있음)
+        user_id = request.data.get("user_id")
         
-    #     # user_id가 없거나 빈 문자열이면 새로운 세션 키 생성
-    #     if not user_id or user_id == "null" or user_id == "undefined":
-    #         if not request.session.session_key:
-    #             request.session.create()
-    #         user_id = request.session.session_key
-    #         print(f"새로운 user_id 생성: {user_id}")  # 디버깅용
-    #     else:
-    #         print(f"기존 user_id 사용: {user_id}")  # 디버깅용
+        # user_id가 없거나 빈 문자열이면 새로운 세션 키 생성
+        if not user_id or user_id == "null" or user_id == "undefined":
+            if not request.session.session_key:
+                request.session.create()
+            user_id = request.session.session_key
+            print(f"새로운 user_id 생성: {user_id}")  # 디버깅용
+        else:
+            print(f"기존 user_id 사용: {user_id}")  # 디버깅용
 
-    #     # 기존 좋아요 확인
-    #     try:
-    #         like = Like.objects.get(user_id=user_id, booth=booth)
-    #         # 이미 좋아요가 존재하면 토글 (좋아요 <-> 좋아요 취소)
+        # 기존 좋아요 확인
+        try:
+            like = Like.objects.get(user_id=user_id, booth=booth)
+            # 이미 좋아요가 존재하면 토글 (좋아요 <-> 좋아요 취소)
 
-    #         like.is_liked = not like.is_liked
-    #         like.save()
+            like.is_liked = not like.is_liked
+            like.save()
 
-    #         if like.is_liked:
-    #             message = "부스 좋아요"
-    #             status_code = status.HTTP_200_OK
-    #         else:
-    #             message = "부스 좋아요 취소"
-    #             status_code = status.HTTP_200_OK
+            if like.is_liked:
+                message = "부스 좋아요"
+                status_code = status.HTTP_200_OK
+            else:
+                message = "부스 좋아요 취소"
+                status_code = status.HTTP_200_OK
 
-    #     except Like.DoesNotExist:
-    #         # 좋아요가 없으면 새로 생성
-    #         Like.objects.create(user_id=user_id, booth=booth, is_liked=True)
-    #         message = "부스 좋아요"
-    #         status_code = status.HTTP_201_CREATED
+        except Like.DoesNotExist:
+            # 좋아요가 없으면 새로 생성
+            Like.objects.create(user_id=user_id, booth=booth, is_liked=True)
+            message = "부스 좋아요"
+            status_code = status.HTTP_201_CREATED
 
-    #     # 현재 좋아요 개수 계산 및 booth.like_cnt 업데이트
-    #     likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
-    #     booth.like_cnt = likes_count
-    #     booth.save()
+        # 현재 좋아요 개수 계산 및 booth.like_cnt 업데이트
+        likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
+        booth.like_cnt = likes_count
+        booth.save()
 
-    #     return Response({
-    #         "message": message,
-    #         "booth_id": booth.id,
-    #         "likes_count": likes_count,
-    #         "is_liked": Like.objects.filter(user_id=user_id, booth=booth, is_liked=True).exists(),
-    #         "user_id": user_id
-    #     }, status=status_code)
+        return Response({
+            "message": message,
+            "booth_id": booth.id,
+            "likes_count": likes_count,
+            "is_liked": Like.objects.filter(user_id=user_id, booth=booth, is_liked=True).exists(),
+            "user_id": user_id
+        }, status=status_code)
 
-    ## 여기는 주석 원래 되어있던부분
     # def _get_client_ip(self, request):
     #     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     #     if x_forwarded_for:
