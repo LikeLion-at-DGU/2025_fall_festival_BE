@@ -186,8 +186,7 @@ class BoothViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    
+
     @method_decorator(
         ratelimit(key="ip", rate="5/h", method="POST", block=True)  # IP당 1시간 5회
     )
