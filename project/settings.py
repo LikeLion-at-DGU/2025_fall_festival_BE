@@ -300,6 +300,5 @@ REST_FRAMEWORK.update({
         "trans_ip_sustained": "10000/day", 
         "trans_user_burst": "400/minute",  
         "trans_user_sustained": "20000/day",  
-
     },
 })

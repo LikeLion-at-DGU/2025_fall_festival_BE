@@ -193,9 +193,10 @@ class BoothViewSet(viewsets.ModelViewSet):
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
 
     
+
     @method_decorator(
         ratelimit(key="ip", rate="50/h", method="POST", block=True)
-    )
+      
     @action(detail=True, methods=["post"], url_path="likes", throttle_classes=[
             LikeIPBurstThrottle, LikeIPSustainedThrottle,
             LikeUserBurstThrottle, LikeUserSustainedThrottle,
