@@ -197,6 +197,13 @@ class BoothViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="likes")
     def likes(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)
+        
+        # 1. 현재 좋아요 개수 확인
+        if booth.like_cnt >= 300:
+            return Response(
+                {"error": "좋아요가 300개를 초과하여 추가할 수 없습니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # 프론트에서 보낸 user_id 확인 (첫 요청 시 null일 수 있음)
         user_id = request.data.get("user_id")
