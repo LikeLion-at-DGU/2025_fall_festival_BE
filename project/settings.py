@@ -261,22 +261,22 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-USE_REDIS_CACHE = env.bool("USE_REDIS_CACHE", default=False)
+#USE_REDIS_CACHE = env.bool("USE_REDIS_CACHE", default=False)
 
-if USE_REDIS_CACHE:
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": env.str("REDIS_URL", "redis://127.0.0.1:6379/1"),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            }
-        }
-    }
-else:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "unique-snowflake",
-        }
-    }
+# if USE_REDIS_CACHE:
+#     CACHES = {
+#         "default": {
+#             "BACKEND": "django_redis.cache.RedisCache",
+#             "LOCATION": env.str("REDIS_URL", "redis://127.0.0.1:6379/1"),
+#             "OPTIONS": {
+#                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#             }
+#         }
+#     }
+# else:
+#     CACHES = {
+#         "default": {
+#             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+#             "LOCATION": "unique-snowflake",
+#         }
+#     }
