@@ -186,9 +186,14 @@ class BoothViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
+<<<<<<< HEAD
     @method_decorator(
         ratelimit(key="ip", rate="5/h", method="POST", block=True)  # IP당 1시간 5회
     )
+=======
+    
+    
+>>>>>>> 15c1de67f1e1fafc70e09e4478d38418524619c8
     @action(detail=True, methods=["post"], url_path="likes")
     def likes(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)

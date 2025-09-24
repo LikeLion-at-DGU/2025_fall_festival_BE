@@ -29,4 +29,4 @@ def update_booth_event_status():
                 if not overlapping:
                     booth.is_event = False
                     booth.save(update_fields=["is_event"])
-               
+    return "부스 이벤트 상태 업데이트 완료."
