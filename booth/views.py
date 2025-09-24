@@ -191,6 +191,8 @@ class BoothViewSet(viewsets.ModelViewSet):
         ratelimit(key="ip", rate="5/h", method="POST", block=True)  # IP당 1시간 5회
     )
     
+    ######################################################
+    # 좋아요 기능
     
     @action(detail=True, methods=["post"], url_path="likes")
     def likes(self, request, pk=None):
@@ -249,6 +251,36 @@ class BoothViewSet(viewsets.ModelViewSet):
     #     else:
     #         ip = request.META.get('REMOTE_ADDR', '')
     #     return ip
+    
+    @action(detail=False, methods=["delete"], url_path="likes")
+    def delete_like(self, request, pk=None):
+        """
+        DELETE /booths/likes/
+        """
+        user_id = request.data.get("user_id")
+        if not user_id:
+            return Response(
+                {"error": "user_id is required in request body"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 해당 유저의 모든 Like 삭제
+        deleted_count, _ = Like.objects.filter(user_id=user_id).delete()
+
+        # 모든 Booth의 좋아요 개수 갱신
+        booths = Booth.objects.all()
+        for booth in booths:
+            likes_count = Like.objects.filter(booth=booth, is_liked=True).count()
+            booth.like_cnt = likes_count
+            booth.save()
+
+        return Response({
+            "message": f"{deleted_count}개의 좋아요 삭제 완료",
+            "user_id": user_id
+        }, status=status.HTTP_200_OK)
+        
+    #########################################################
+    
     
     @action(detail=False, methods=["post"], url_path="sync/start")
     def start_sync(self, request):
