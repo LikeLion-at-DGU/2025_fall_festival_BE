@@ -190,10 +190,6 @@ class BoothViewSet(viewsets.ModelViewSet):
     @method_decorator(
         ratelimit(key="ip", rate="5/h", method="POST", block=True)  # IP당 1시간 5회
     )
-    
-    ######################################################
-    # 좋아요 기능
-    
     @action(detail=True, methods=["post"], url_path="likes")
     def likes(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)
