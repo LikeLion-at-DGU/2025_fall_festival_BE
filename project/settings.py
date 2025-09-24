@@ -261,9 +261,22 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-CELERY_BEAT_SCHEDULE.update({
-    'sync-booth-data-every-5-minutes': {
-        'task': 'booth.tasks.sync_booth_data_task',
-        'schedule': 300.0,  # 5분마다 실행
-    },
-})
+USE_REDIS_CACHE = env.bool("USE_REDIS_CACHE", default=False)
+
+if USE_REDIS_CACHE:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": env.str("REDIS_URL", "redis://127.0.0.1:6379/1"),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
