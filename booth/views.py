@@ -4,6 +4,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 
 from .models import *
 from .serializers import *
@@ -184,7 +186,9 @@ class BoothViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
-    
+    @method_decorator(
+        ratelimit(key="ip", rate="5/h", method="POST", block=True)  # IP당 1시간 5회
+    )
     @action(detail=True, methods=["post"], url_path="likes")
     def likes(self, request, pk=None):
         booth = get_object_or_404(Booth, id=pk)
