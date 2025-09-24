@@ -284,15 +284,22 @@ else:
 # 스로틀
 REST_FRAMEWORK.update({
     "DEFAULT_THROTTLE_CLASSES": [
-        "common.throttles.LikeIPBurstThrottle",       # 1/sec
-        "common.throttles.LikeIPSustainedThrottle",   # 5/min
-        "common.throttles.LikeUserBurstThrottle",     # 1/sec (로그인 유저)
-        "common.throttles.LikeUserSustainedThrottle", # 5/min (로그인 유저)
+        "common.throttles.LikeIPBurstThrottle",     
+        "common.throttles.LikeIPSustainedThrottle",  
+        "common.throttles.LikeUserBurstThrottle",  
+        "common.throttles.LikeUserSustainedThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "ip_burst": "3/second",
         "ip_sustained": "50/minute",
         "user_burst": "3/second",
         "user_sustained": "50/minute",
+
+        # 번역
+        "trans_ip_burst": "200/minute",    
+        "trans_ip_sustained": "10000/day", 
+        "trans_user_burst": "400/minute",  
+        "trans_user_sustained": "20000/day",  
+
     },
 })
