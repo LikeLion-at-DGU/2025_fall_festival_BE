@@ -13,6 +13,11 @@ from .services import *
 from .selectors import *
 import random
 
+from common.throttles import (
+    LikeIPBurstThrottle, LikeIPSustainedThrottle,
+    LikeUserBurstThrottle, LikeUserSustainedThrottle,
+)
+
 class BoothViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
@@ -187,8 +192,14 @@ class BoothViewSet(viewsets.ModelViewSet):
 
         return Response({"error": "해당 카테고리를 지원하지 않습니다"}, status=status.HTTP_400_BAD_REQUEST)
 
+    
+    
+    @action(detail=True, methods=["post"], url_path="likes", throttle_classes=[
+            LikeIPBurstThrottle, LikeIPSustainedThrottle,
+            LikeUserBurstThrottle, LikeUserSustainedThrottle,
+        ])
     @method_decorator(
-        ratelimit(key="ip", rate="5/h", method="POST", block=True)  # IP당 1시간 5회
+        ratelimit(key="ip", rate="50/h", method="POST", block=True)  # IP당 1시간 5회
     )
     @action(detail=True, methods=["post"], url_path="likes")
     def likes(self, request, pk=None):
