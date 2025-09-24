@@ -290,9 +290,9 @@ REST_FRAMEWORK.update({
         "common.throttles.LikeUserSustainedThrottle", # 5/min (로그인 유저)
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "ip_burst": "1/second",
-        "ip_sustained": "5/minute",
-        "user_burst": "1/second",
-        "user_sustained": "5/minute",
+        "ip_burst": "3/second",
+        "ip_sustained": "50/minute",
+        "user_burst": "3/second",
+        "user_sustained": "50/minute",
     },
 })
