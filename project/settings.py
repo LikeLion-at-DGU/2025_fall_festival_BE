@@ -280,3 +280,19 @@ else:
             "LOCATION": "unique-snowflake",
         }
     }
+
+# 스로틀
+REST_FRAMEWORK.update({
+    "DEFAULT_THROTTLE_CLASSES": [
+        "common.throttles.LikeIPBurstThrottle",       # 1/sec
+        "common.throttles.LikeIPSustainedThrottle",   # 5/min
+        "common.throttles.LikeUserBurstThrottle",     # 1/sec (로그인 유저)
+        "common.throttles.LikeUserSustainedThrottle", # 5/min (로그인 유저)
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "ip_burst": "1/second",
+        "ip_sustained": "5/minute",
+        "user_burst": "1/second",
+        "user_sustained": "5/minute",
+    },
+})
