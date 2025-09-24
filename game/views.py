@@ -3,6 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 
 from .models import Game, Coupon
 from .serializers import GameSerializer
@@ -13,6 +15,9 @@ class GameViewset(viewsets.ModelViewSet):
     queryset = Game.objects.all()
     serializer_class = GameSerializer
 
+    @method_decorator(
+        ratelimit(key="ip", rate="3/h", method="POST", block=True)
+    )
     @action(detail=False, methods=['post'], url_name='start', url_path='start')
     def start(self, request):
         user_id = request.data.get("user_id")
@@ -41,7 +46,10 @@ class GameViewset(viewsets.ModelViewSet):
                 "try_times": game.try_times
             }
         }, status=status.HTTP_200_OK)
-
+    
+    @method_decorator(
+        ratelimit(key="ip", rate="3/h", method="POST", block=True)
+    )
     @action(detail=False, methods=['post'], url_name='success', url_path='success')
     def success(self, request):
         user_id = request.data.get("user_id")
