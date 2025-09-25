@@ -196,7 +196,8 @@ class BoothViewSet(viewsets.ModelViewSet):
 
     @method_decorator(
         ratelimit(key="ip", rate="50/h", method="POST", block=True)
-      
+    )
+    
     @action(detail=True, methods=["post"], url_path="likes", throttle_classes=[
             LikeIPBurstThrottle, LikeIPSustainedThrottle,
             LikeUserBurstThrottle, LikeUserSustainedThrottle,
