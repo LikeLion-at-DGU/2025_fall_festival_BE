@@ -15,9 +15,9 @@ class GameViewset(viewsets.ModelViewSet):
     queryset = Game.objects.all()
     serializer_class = GameSerializer
 
-    @method_decorator(
-        ratelimit(key="ip", rate="10/h", method="POST", block=True)
-    )
+    # @method_decorator(
+    #     ratelimit(key="ip", rate="10/h", method="POST", block=True)
+    # )
     @action(detail=False, methods=['post'], url_name='start', url_path='start')
     def start(self, request):
         user_id = request.data.get("user_id")
@@ -47,9 +47,9 @@ class GameViewset(viewsets.ModelViewSet):
             }
         }, status=status.HTTP_200_OK)
     
-    @method_decorator(
-        ratelimit(key="ip", rate="15/h", method="POST", block=True)
-    )
+    # @method_decorator(
+    #     ratelimit(key="ip", rate="15/h", method="POST", block=True)
+    # )
     @action(detail=False, methods=['post'], url_name='success', url_path='success')
     def success(self, request):
         user_id = request.data.get("user_id")
