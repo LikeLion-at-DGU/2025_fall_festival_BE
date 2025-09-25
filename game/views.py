@@ -71,7 +71,7 @@ class GameViewset(viewsets.ModelViewSet):
         total_success_count = Game.objects.filter(is_end=True).count()
 
         # 쿠폰 당첨 순번
-        WINNING_NUMBERS = [30+11367, 43+11367, 52+11367, 71+11367, 89+11367, 107+11367, 122+11367, 130+11367, 136+11367, 150+11367, 167+11367, 174+11367, 192+11367, 201+11367, 232+11367, 266+11367, 308+11367, 344+11367, 366+11367, 399+11367]
+        WINNING_NUMBERS = [11700, 11706, 11711, 11715, 11722, 11730, 11736, 11748]
         is_winner = total_success_count in WINNING_NUMBERS
 
         return Response({
