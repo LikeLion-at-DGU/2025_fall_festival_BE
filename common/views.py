@@ -10,12 +10,21 @@ from .models import Translation
 from .selectors import get_translation
 from .services import create_or_update_translation, _sha256
 
+from common.throttles import (
+    TransIPBurstThrottle, TransIPSustainedThrottle,
+    TransUserBurstThrottle, TransUserSustainedThrottle,
+)
 
 class TranslationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Translation.objects.all().order_by("-updated_at")
     serializer_class = TranslationSerializer
     # 개발용(로컬 스모크 테스트)만 잠깐 열 때:
     # permission_classes = [AllowAny]
+
+    throttle_classes = [
+        TransUserBurstThrottle, TransUserSustainedThrottle,
+        TransIPBurstThrottle,  TransIPSustainedThrottle,
+    ]
 
     @action(detail=False, methods=["post"], url_path="resolve")
     def resolve(self, request):
