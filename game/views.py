@@ -32,8 +32,8 @@ class GameViewset(viewsets.ModelViewSet):
         last_game = Game.objects.filter(user_id=user_id).order_by('-try_times').first()
         next_try = last_game.try_times + 1 if last_game else 1
 
-        if next_try > 3:
-            return Response({"message": "3회 시도를 모두 완료했습니다."}, status=status.HTTP_400_BAD_REQUEST)
+        if next_try > 5:
+            return Response({"message": "5회 시도를 모두 완료했습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 다음 시도 게임 생성
         game = Game.objects.create(user_id=user_id, try_times=next_try, is_started=True)
@@ -71,13 +71,14 @@ class GameViewset(viewsets.ModelViewSet):
         total_success_count = Game.objects.filter(is_end=True).count()
 
         # 쿠폰 당첨 순번
-        WINNING_NUMBERS = [4, 31, 199, 251, 333, 777, 1123, 1313, 1571, 2017]
+        WINNING_NUMBERS = [30+11367, 43+11367, 72+11367, 81+11367, 100+11367, 111+11367, 189+11367, 211+11367, 240+11367, 256+11367, 299+11367, 312+11367, 333+11367, 357+11367, 411+11367, 444+11367, 478+11367, 512+11367, 560+11367, 600+11367]
         is_winner = total_success_count in WINNING_NUMBERS
 
         return Response({
             "message": "쿠폰 당첨" if is_winner else "쿠폰 미당첨",
             "data": {
-                "is_coupon": is_winner            }
+                "is_coupon": is_winner            
+            }
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_name='coupon', url_path='coupon')
